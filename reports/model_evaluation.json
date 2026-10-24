@@ -1,0 +1,74 @@
+{
+  "split_year": 2018,
+  "feature_cols_map": [
+    "latitude",
+    "longitude",
+    "month",
+    "quarter",
+    "season_code",
+    "rain_30d",
+    "rain_60d",
+    "rain_90d",
+    "rain_180d",
+    "rain_365d",
+    "rain_dry_days_30d",
+    "rain_max_1d_30d"
+  ],
+  "feature_cols_fc": [
+    "latitude",
+    "longitude",
+    "month",
+    "quarter",
+    "season_code",
+    "gw_level_mbgl",
+    "gw_level_lag1",
+    "days_since_prev_obs",
+    "rain_30d",
+    "rain_60d",
+    "rain_90d",
+    "rain_180d",
+    "rain_365d",
+    "rain_dry_days_30d",
+    "rain_max_1d_30d"
+  ],
+  "results_map": {
+    "Baseline (Seasonal-Station Mean)": {
+      "MAE": 2.001,
+      "RMSE": 2.695,
+      "R2": 0.407
+    },
+    "Ridge Regression": {
+      "MAE": 2.371,
+      "RMSE": 3.046,
+      "R2": 0.243
+    },
+    "Random Forest": {
+      "MAE": 1.671,
+      "RMSE": 2.281,
+      "R2": 0.575
+    },
+    "Gradient Boosting": {
+      "MAE": 1.752,
+      "RMSE": 2.395,
+      "R2": 0.532
+    }
+  },
+  "results_fc": {
+    "Baseline (Persistence: gw_now)": {
+      "MAE": 2.744,
+      "RMSE": 3.709,
+      "R2": -0.233
+    },
+    "Random Forest Regressor": {
+      "MAE": 2.136,
+      "RMSE": 2.931,
+      "R2": 0.23
+    },
+    "HistGradientBoosting": {
+      "MAE": 2.192,
+      "RMSE": 3.06,
+      "R2": 0.161
+    }
+  },
+  "uncertainty_80pct_coverage": 58.87
+}
