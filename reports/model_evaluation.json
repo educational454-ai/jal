@@ -43,14 +43,14 @@
       "R2": 0.243
     },
     "Random Forest": {
-      "MAE": 1.671,
+      "MAE": 1.67,
       "RMSE": 2.281,
       "R2": 0.575
     },
     "Gradient Boosting": {
-      "MAE": 1.752,
-      "RMSE": 2.395,
-      "R2": 0.532
+      "MAE": 1.794,
+      "RMSE": 2.419,
+      "R2": 0.523
     }
   },
   "results_fc": {
@@ -60,15 +60,15 @@
       "R2": -0.233
     },
     "Random Forest Regressor": {
-      "MAE": 2.136,
-      "RMSE": 2.931,
-      "R2": 0.23
+      "MAE": 2.134,
+      "RMSE": 2.929,
+      "R2": 0.231
     },
     "HistGradientBoosting": {
-      "MAE": 2.192,
-      "RMSE": 3.06,
-      "R2": 0.161
+      "MAE": 2.205,
+      "RMSE": 3.022,
+      "R2": 0.181
     }
   },
-  "uncertainty_80pct_coverage": 58.87
+  "uncertainty_80pct_coverage": 56.45
 }
