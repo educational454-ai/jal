@@ -81,16 +81,18 @@ def evaluate_models():
         print(f"  {name:32s} -> MAE: {mae:.3f} m | RMSE: {rmse:.3f} m | R2: {r2:.3f}")
 
     # -------------------------------------------------------------
-    # TASK 2: Next-Quarter Groundwater Forecasting (SCREEN 3)
-    # Target: gw_level_next
+    # TASK 2: Next Recorded Observation Groundwater Forecasting (SCREEN 3)
+    # Target: gw_level_next (Next recorded monitoring event, irregular horizon)
     # -------------------------------------------------------------
     print("\n" + "="*50)
-    print("TASK 2: NEXT-QUARTER / 1-3 MONTH AHEAD FORECASTING (SCREEN 3)")
+    print("TASK 2: NEXT RECORDED OBSERVATION FORECASTING (SCREEN 3)")
     print("="*50)
     
-    # Filter rows that have next observation
+    # Filter rows that have next observation and previous lag
     df_fc = df.dropna(subset=['gw_level_next', 'gw_level_lag1']).copy()
     
+    # Feature columns: only features known at or prior to the observation time
+    # 'days_to_next_obs' is intentionally EXCLUDED because future interval is not known at forecast time
     feature_cols_fc = [
         'latitude', 'longitude', 'month', 'quarter', 'season_code',
         'gw_level_mbgl', 'gw_level_lag1', 'days_since_prev_obs',
@@ -98,16 +100,32 @@ def evaluate_models():
         'rain_dry_days_30d', 'rain_max_1d_30d'
     ]
     
-    train_mask_fc = df_fc['year'] < split_year
-    test_mask_fc = df_fc['year'] >= split_year
+    # Zero-Target-Leakage Chronological Split:
+    # A sample is in Train ONLY if both observation date AND forward target date are strictly before split_date.
+    # Test set observations start strictly at split_date.
+    df_fc['date_dt'] = pd.to_datetime(df_fc['date'])
+    df_fc['target_date_dt'] = pd.to_datetime(df_fc['target_date'])
+    split_date = pd.to_datetime(f"{split_year}-01-01")
+    
+    train_mask_fc = (df_fc['date_dt'] < split_date) & (df_fc['target_date_dt'] < split_date)
+    test_mask_fc = df_fc['date_dt'] >= split_date
+    
+    # Assert zero boundary leakage
+    assert df_fc.loc[train_mask_fc, 'target_date_dt'].max() < split_date, (
+        f"Target leakage error: training set target dates exceed split boundary ({split_date})"
+    )
+    assert df_fc.loc[test_mask_fc, 'date_dt'].min() >= split_date, (
+        f"Split integrity error: test set contains observation date before split boundary ({split_date})"
+    )
     
     X_train_fc = df_fc.loc[train_mask_fc, feature_cols_fc]
     y_train_fc = df_fc.loc[train_mask_fc, 'gw_level_next']
     X_test_fc = df_fc.loc[test_mask_fc, feature_cols_fc]
     y_test_fc = df_fc.loc[test_mask_fc, 'gw_level_next']
     
-    print(f"Train samples (1996 - {split_year-1}): {len(X_train_fc)}")
-    print(f"Test samples ({split_year} - 2023): {len(X_test_fc)}")
+    print(f"Train samples ({df_fc.loc[train_mask_fc, 'date_dt'].min().date()} to {df_fc.loc[train_mask_fc, 'date_dt'].max().date()}): {len(X_train_fc)}")
+    print(f"  (Train forward target range: {df_fc.loc[train_mask_fc, 'target_date_dt'].min().date()} to {df_fc.loc[train_mask_fc, 'target_date_dt'].max().date()})")
+    print(f"Test samples ({df_fc.loc[test_mask_fc, 'date_dt'].min().date()} to {df_fc.loc[test_mask_fc, 'date_dt'].max().date()}): {len(X_test_fc)}")
     
     # Baseline: Persistence (forecast = current gw_level_mbgl)
     y_pred_persist = df_fc.loc[test_mask_fc, 'gw_level_mbgl']
@@ -119,7 +137,7 @@ def evaluate_models():
         'HistGradientBoosting': HistGradientBoostingRegressor(max_iter=150, max_depth=5, random_state=42)
     }
     
-    # Quantile models for Uncertainty Intervals (10th and 90th percentile bounds)
+    # Quantile models for Uncertainty Intervals (nominal 10th and 90th percentile bounds)
     q10_model = GradientBoostingRegressor(loss='quantile', alpha=0.10, n_estimators=100, max_depth=4, random_state=42)
     q90_model = GradientBoostingRegressor(loss='quantile', alpha=0.90, n_estimators=100, max_depth=4, random_state=42)
     
@@ -143,11 +161,13 @@ def evaluate_models():
         results_fc[name] = {'MAE': round(mae, 3), 'RMSE': round(rmse, 3), 'R2': round(r2, 3)}
         print(f"  {name:32s} -> MAE: {mae:.3f} m | RMSE: {rmse:.3f} m | R2: {r2:.3f}")
         
-    # Uncertainty interval coverage on test set
+    # Empirical uncertainty interval coverage on held-out test set
     preds_q10 = q10_model.predict(X_test_fc)
     preds_q90 = q90_model.predict(X_test_fc)
-    coverage = np.mean((y_test_fc >= preds_q10) & (y_test_fc <= preds_q90)) * 100.0
-    print(f"\nUncertainty Band (10th - 90th Percentile) Empirical Coverage on Test Set: {coverage:.1f}%")
+    coverage = float(np.mean((y_test_fc >= preds_q10) & (y_test_fc <= preds_q90)) * 100.0)
+    avg_width = float(np.mean(preds_q90 - preds_q10))
+    print(f"\nUncertainty Band (q10–q90) Empirical Coverage on Held-Out Test Set: {coverage:.2f}% (Average width: {avg_width:.2f} m)")
+    print(f"  Note: Nominal 80% coverage is uncalibrated out-of-sample (miss rate: {100.0 - coverage:.2f}%).")
     
     # -------------------------------------------------------------
     # 3. Save Best Models & Metadata
@@ -158,13 +178,47 @@ def evaluate_models():
     joblib.dump(q10_model, "models/forecast_q10.joblib")
     joblib.dump(q90_model, "models/forecast_q90.joblib")
     
-    # Save feature columns metadata
+    # Save feature columns and audit metadata
+    test_horizons = df_fc.loc[test_mask_fc, 'days_to_next_obs']
+    all_horizons = df_fc['days_to_next_obs']
+    
     metadata = {
         'split_year': split_year,
+        'split_date': f"{split_year}-01-01",
+        'task_description': 'Next recorded monitoring observation forecasting (irregular event horizon)',
+        'evaluation_period': {
+            'train_obs_range': [str(df_fc.loc[train_mask_fc, 'date_dt'].min().date()), str(df_fc.loc[train_mask_fc, 'date_dt'].max().date())],
+            'train_target_range': [str(df_fc.loc[train_mask_fc, 'target_date_dt'].min().date()), str(df_fc.loc[train_mask_fc, 'target_date_dt'].max().date())],
+            'test_obs_range': [str(df_fc.loc[test_mask_fc, 'date_dt'].min().date()), str(df_fc.loc[test_mask_fc, 'date_dt'].max().date())],
+            'train_sample_count': int(len(X_train_fc)),
+            'test_sample_count': int(len(X_test_fc))
+        },
+        'horizon_statistics': {
+            'test_population': {
+                'description': 'Held-out test set observations (2018–2023, n=124)',
+                'mean_days': float(round(test_horizons.mean(), 1)),
+                'median_days': float(round(test_horizons.median(), 1)),
+                'min_days': float(round(test_horizons.min(), 1)),
+                'max_days': float(round(test_horizons.max(), 1))
+            },
+            'overall_population': {
+                'description': 'All eligible consecutive monitoring pairs (1996–2023, n=658)',
+                'mean_days': float(round(all_horizons.mean(), 1)),
+                'median_days': float(round(all_horizons.median(), 1)),
+                'min_days': float(round(all_horizons.min(), 1)),
+                'max_days': float(round(all_horizons.max(), 1))
+            }
+        },
         'feature_cols_map': feature_cols_map,
         'feature_cols_fc': feature_cols_fc,
         'results_map': results_map,
         'results_fc': results_fc,
+        'uncertainty_intervals': {
+            'nominal_coverage_pct': 80.0,
+            'empirical_test_coverage_pct': round(coverage, 2),
+            'average_interval_width_meters': round(avg_width, 2),
+            'calibration_status': 'uncalibrated_undercoverage' if coverage < 75.0 else 'calibrated'
+        },
         'uncertainty_80pct_coverage': round(coverage, 2)
     }
     with open("reports/model_evaluation.json", "w") as f:

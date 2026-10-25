@@ -24,9 +24,12 @@ def engineer_features():
     target_col = 'Groundwater Level Quarterly Manual (meter)'
     df_gw['gw_level_mbgl'] = df_gw[target_col]
     
-    # Clip negative reading (-0.4m artesian/overflowing) to 0.0m for depth-below-ground
+    # Preserve original negative readings (e.g. -0.40m at Narayanpur on 05-11-2009).
+    # In hydrogeology, negative MBGL indicates artesian / overflow conditions where the
+    # piezometric surface rises above ground level. We keep the true physical observation
+    # and provide 'is_overflow' as an explicit indicator.
     df_gw['is_overflow'] = (df_gw['gw_level_mbgl'] < 0).astype(int)
-    df_gw['gw_level_mbgl'] = df_gw['gw_level_mbgl'].apply(lambda x: max(0.0, x))
+    # Do NOT clip to 0.0m; preserve authentic water level
     
     # Clean rainfall
     df_rf['date'] = pd.to_datetime(df_rf['time'], dayfirst=True)
@@ -35,12 +38,20 @@ def engineer_features():
     # Grid coordinates
     grid_coords = df_rf[['latitude', 'longitude']].drop_duplicates().values
     print(f"Rainfall grid points: {grid_coords}")
+    grid_lat_min, grid_lat_max = grid_coords[:, 0].min(), grid_coords[:, 0].max()
+    grid_lon_min, grid_lon_max = grid_coords[:, 1].min(), grid_coords[:, 1].max()
+    print(f"Rainfall grid bounds: Lat [{grid_lat_min}, {grid_lat_max}], Lon [{grid_lon_min}, {grid_lon_max}]")
     
-    # Station coordinates
+    # Station coordinates & spatial grid validity check
     stations = df_gw.groupby('Station')[['Latitude', 'Longitude']].first().reset_index()
+    stations['is_rainfall_extrapolated'] = (
+        (stations['Latitude'] < grid_lat_min) | (stations['Latitude'] > grid_lat_max) |
+        (stations['Longitude'] < grid_lon_min) | (stations['Longitude'] > grid_lon_max)
+    ).astype(int)
     print(f"Stations ({len(stations)}):")
     for _, row in stations.iterrows():
-        print(f"  {row['Station']}: ({row['Latitude']:.4f}, {row['Longitude']:.4f})")
+        extra_note = " [EXTRAPOLATED RAINFALL]" if row['is_rainfall_extrapolated'] else " [INTERPOLATED]"
+        print(f"  {row['Station']}: ({row['Latitude']:.4f}, {row['Longitude']:.4f}){extra_note}")
         
     print("\n--- 2. Computing Spatially Weighted Rainfall per Station ---")
     # For each station, compute IDW weights from the 4 grid points
@@ -81,8 +92,12 @@ def engineer_features():
         rf_series = station_daily_rf[st_name]
         
         # Calculate windows leading up to obs_date
-        # Lookback windows: 30, 60, 90, 180, 365 days
-        end_idx = obs_date
+        # Temporal alignment convention: Groundwater observations are recorded at 06:00 AM IST.
+        # To strictly prevent same-day leakage (rainfall occurring between 06:00 AM and 23:59 IST on obs_date),
+        # antecedent rainfall lookback windows end on (obs_date - 1 day).
+        # For an exact N-day window [obs_date - N, obs_date - 1], the count of inclusive calendar days is:
+        # (obs_date - 1) - (obs_date - N) + 1 = N days.
+        end_idx = obs_date - datetime.timedelta(days=1)
         start_30 = obs_date - datetime.timedelta(days=30)
         start_60 = obs_date - datetime.timedelta(days=60)
         start_90 = obs_date - datetime.timedelta(days=90)
@@ -94,6 +109,13 @@ def engineer_features():
         sub_90 = rf_series.loc[start_90:end_idx]
         sub_180 = rf_series.loc[start_180:end_idx]
         sub_365 = rf_series.loc[start_365:end_idx]
+
+        # Verify window length exactness
+        assert len(sub_30) == 30, f"Expected 30 days, got {len(sub_30)} for {obs_date}"
+        assert len(sub_60) == 60, f"Expected 60 days, got {len(sub_60)} for {obs_date}"
+        assert len(sub_90) == 90, f"Expected 90 days, got {len(sub_90)} for {obs_date}"
+        assert len(sub_180) == 180, f"Expected 180 days, got {len(sub_180)} for {obs_date}"
+        assert len(sub_365) == 365, f"Expected 365 days, got {len(sub_365)} for {obs_date}"
         
         rain_30d = sub_30.sum() if len(sub_30) > 0 else np.nan
         rain_60d = sub_60.sum() if len(sub_60) > 0 else np.nan
@@ -119,6 +141,8 @@ def engineer_features():
             season_tag = 'Rabi/Winter (Jan)'
             season_code = 4
             
+        is_extrap = int(stations.loc[stations['Station'] == st_name, 'is_rainfall_extrapolated'].values[0])
+
         records.append({
             'station': st_name,
             'latitude': row['Latitude'],
@@ -132,6 +156,7 @@ def engineer_features():
             'season_code': season_code,
             'gw_level_mbgl': row['gw_level_mbgl'],
             'is_overflow': row['is_overflow'],
+            'is_rainfall_extrapolated': is_extrap,
             'rain_30d': round(rain_30d, 2),
             'rain_60d': round(rain_60d, 2),
             'rain_90d': round(rain_90d, 2),
@@ -144,7 +169,7 @@ def engineer_features():
     df_features = pd.DataFrame(records)
     
     # Compute station-level temporal lags and forward target (lead)
-    print("--- 4. Computing Lags & Next-Quarter Target ---")
+    print("--- 4. Computing Lags & Next-Observation Target ---")
     df_features['date_dt'] = pd.to_datetime(df_features['date'])
     df_features = df_features.sort_values(by=['station', 'date_dt']).reset_index(drop=True)
     
@@ -152,13 +177,14 @@ def engineer_features():
     df_features['gw_level_lag1'] = df_features.groupby('station')['gw_level_mbgl'].shift(1)
     df_features['gw_level_lag2'] = df_features.groupby('station')['gw_level_mbgl'].shift(2)
     
-    # Days elapsed since previous observation
+    # Days elapsed since previous observation (known at observation time)
     df_features['days_since_prev_obs'] = (
         df_features['date_dt'] - df_features.groupby('station')['date_dt'].shift(1)
     ).dt.days
     
-    # Forward target: gw_level_next (for forecasting the next observation, typically 1 quarter ahead)
+    # Forward target: gw_level_next (for forecasting the next recorded observation)
     df_features['gw_level_next'] = df_features.groupby('station')['gw_level_mbgl'].shift(-1)
+    df_features['target_date'] = df_features.groupby('station')['date'].shift(-1)
     df_features['days_to_next_obs'] = (
         df_features.groupby('station')['date_dt'].shift(-1) - df_features['date_dt']
     ).dt.days
