@@ -2,7 +2,7 @@
 import pandas as pd
 import streamlit as st
 
-from services.data_loader import get_latest_per_station
+from services.data_loader import get_latest_per_station, get_depth_tier_category
 from components.map_view import render_groundwater_map
 from components.callouts import render_spatial_model_status_expander
 from styles.theme import get_current_theme
@@ -32,18 +32,23 @@ def render_groundwater_map_screen(df: pd.DataFrame) -> None:
         
         selected_zone_filter = st.selectbox(
             "Filter by Depth Tier", 
-            ["All Stations", "Shallow (< 4m)", "Moderate (4-8m)", "Deep (> 8m)"]
+            ["All Stations", "Shallow (< 4.0 m)", "Moderate (4.0–8.0 m)", "Deep (> 8.0 m)"]
         )
         
     filtered_stations = latest_st.copy()
-    if selected_zone_filter == "Shallow (< 4m)":
-        filtered_stations = filtered_stations[filtered_stations['gw_level_mbgl'] < 4.0]
-    elif selected_zone_filter == "Moderate (4-8m)":
+    filter_category_map = {
+        "Shallow (< 4.0 m)": "Shallow",
+        "Moderate (4.0–8.0 m)": "Moderate",
+        "Deep (> 8.0 m)": "Deep",
+        "Shallow (< 4m)": "Shallow",
+        "Moderate (4-8m)": "Moderate",
+        "Deep (> 8m)": "Deep",
+    }
+    target_category = filter_category_map.get(selected_zone_filter)
+    if target_category:
         filtered_stations = filtered_stations[
-            (filtered_stations['gw_level_mbgl'] >= 4.0) & (filtered_stations['gw_level_mbgl'] <= 8.0)
+            filtered_stations['gw_level_mbgl'].apply(get_depth_tier_category) == target_category
         ]
-    elif selected_zone_filter == "Deep (> 8m)":
-        filtered_stations = filtered_stations[filtered_stations['gw_level_mbgl'] > 8.0]
         
     with c_m1:
         render_groundwater_map(filtered_stations, theme=active_theme)

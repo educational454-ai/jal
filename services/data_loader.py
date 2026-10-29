@@ -34,52 +34,69 @@ def get_latest_per_station(df: pd.DataFrame) -> pd.DataFrame:
     return latest
 
 
-def get_depth_tier(mbgl: float) -> tuple[str, str, str]:
-    """Classify water table depth into project-defined physical reference tiers.
+def get_depth_tier_category(mbgl: float | None) -> str:
+    """Return canonical tier category string: 'Shallow', 'Moderate', 'Deep', or 'Unknown'.
     
     Boundary definitions:
     - Shallow: mbgl < 4.0 m
     - Moderate: 4.0 <= mbgl <= 8.0 m (inclusive of boundary values 4.0 m and 8.0 m)
     - Deep: mbgl > 8.0 m
+    - Unknown: missing, NaN, non-numeric, or invalid values
     
     Note: These tiers are project-defined physical reference bands for instantaneous
     telemetry visualization. They do not constitute official Central Ground Water Board
     (CGWB) or Groundwater Estimation Committee (GEC) administrative exploitation categories.
-    
-    Returns:
-        (tier_label, hex_color, badge_css_class)
     """
-    if mbgl < 4.0:
-        return "Shallow (< 4.0 m)", "#0F766E", "badge-shallow"
-    elif mbgl <= 8.0:
-        return "Moderate (4.0–8.0 m)", "#854D0E", "badge-moderate"
-    else:
-        return "Deep (> 8.0 m)", "#991B1B", "badge-deep"
-
-
-def get_depth_tier_category(mbgl: float) -> str:
-    """Return canonical tier category string: 'Shallow', 'Moderate', or 'Deep'."""
-    if mbgl < 4.0:
+    if mbgl is None:
+        return "Unknown"
+    try:
+        val = float(mbgl)
+        if pd.isna(val):
+            return "Unknown"
+    except (ValueError, TypeError):
+        return "Unknown"
+        
+    if val < 4.0:
         return "Shallow"
-    elif mbgl <= 8.0:
+    elif val <= 8.0:
         return "Moderate"
     else:
         return "Deep"
 
 
-def get_status(mbgl: float) -> tuple[str, str, str]:
+def get_depth_tier(mbgl: float | None) -> tuple[str, str, str]:
+    """Classify water table depth into project-defined physical reference tiers.
+    
+    Returns:
+        (tier_label, hex_color, badge_css_class)
+    """
+    cat = get_depth_tier_category(mbgl)
+    if cat == "Shallow":
+        return "Shallow (< 4.0 m)", "#0F766E", "badge-shallow"
+    elif cat == "Moderate":
+        return "Moderate (4.0–8.0 m)", "#854D0E", "badge-moderate"
+    elif cat == "Deep":
+        return "Deep (> 8.0 m)", "#991B1B", "badge-deep"
+    else:
+        return "Unknown / Unclassified", "#64748B", "badge-unknown"
+
+
+def get_status(mbgl: float | None) -> tuple[str, str, str]:
     """Backward-compatible alias for get_depth_tier."""
     return get_depth_tier(mbgl)
 
 
-def get_intervention_plan(mbgl: float) -> dict:
+def get_intervention_plan(mbgl: float | None) -> dict:
     """Return rule-based conservation advisories corresponding to physical depth tiers.
     
     Advisory notes:
-    Recommendations are synthesized heuristics from CGWB and GSDA watershed guidelines,
-    intended for preliminary decision support. Water table depth alone does not establish
-    the complex localized cause of groundwater conditions (e.g. lithological variation,
-    fracture connectivity, localized pumping, or topographic recharge dynamics).
+    Recommendations are rule-based hydrogeological heuristics synthesized from standard
+    CGWB and GSDA watershed guidelines for preliminary decision support. Water table depth
+    alone does not prove groundwater depletion, establish its localized root causes (e.g.
+    lithological variation, fracture connectivity, localized pumping, or recharge dynamics),
+    or prove the necessity of a specific engineering structure at a site.
+    All structural interventions require localized on-site hydrogeological, geophysical,
+    and civil feasibility surveys prior to implementation.
     """
     cat = get_depth_tier_category(mbgl)
     if cat == "Deep":
@@ -89,13 +106,13 @@ def get_intervention_plan(mbgl: float) -> dict:
             "icon": "🔴",
             "color": "#991B1B",
             "badge": "badge-deep",
-            "priority": "High Priority Intervention Advisory",
-            "priority_level": "Deep / Stress Tier (> 8.0 m MBGL)",
+            "priority": "High-Vulnerability Monitoring & Conservation Advisory",
+            "priority_level": "Deep Reference Tier (> 8.0 m MBGL)",
             "actions": [
-                ("Artificial Recharge Structures", "Prioritize expedited site surveys for percolation tanks and cement check dams across regional nalas to capture monsoon runoff in fractured basalt."),
-                ("Extraction Monitoring & Borewell Review", "Review high-capacity commercial extraction permits and recommend voluntary seasonal pumping moderation until post-monsoon water table recovery."),
-                ("Crop Shift Advisory", "Promote transition of water-intensive summer crops (e.g., sugarcane) toward drought-hardy pulses, millets, and drip-irrigated horticulture (custard apple, pomegranate)."),
-                ("Lined Farm Ponds (Shet-Tale)", "Encourage plastic lining for farm ponds to eliminate excessive percolation loss from surface storage in porous soils.")
+                ("Artificial Recharge Exploration", "Prioritize site feasibility surveys for percolation structures and check dams in regional drainage paths where local basalt fracturing supports infiltration."),
+                ("Extraction Monitoring & Pumping Review", "Conduct voluntary monitoring of local extraction rates and recommend voluntary seasonal pumping moderation during peak summer dry periods."),
+                ("Crop Water Management Advisory", "Promote transition of water-intensive summer crops toward drought-resilient pulses, millets, and drip-irrigated horticulture (custard apple, pomegranate)."),
+                ("Lined Farm Storage (Shet-Tale)", "Encourage plastic lining for farm storage ponds where porous soil conditions lead to high percolation losses.")
             ]
         }
     elif cat == "Moderate":
@@ -105,25 +122,39 @@ def get_intervention_plan(mbgl: float) -> dict:
             "icon": "🟡",
             "color": "#854D0E",
             "badge": "badge-moderate",
-            "priority": "Moderate Depletion Precaution",
-            "priority_level": "Moderate Dynamic Tier (4.0–8.0 m MBGL)",
+            "priority": "Precautionary Stewardship & Recharge Advisory",
+            "priority_level": "Moderate Reference Tier (4.0–8.0 m MBGL)",
             "actions": [
-                ("Continuous Contour Trenches (CCT)", "Implement ridge-to-valley soil moisture conservation and contour bunding on upper slope wasteland and barren lands to enhance recharge lag time."),
-                ("Micro-Irrigation Incentives", "Promote expanded drip and micro-sprinkler irrigation systems for fig, vegetable, and orchard farming to reduce consumptive demand."),
+                ("Contour Bunding & Soil Moisture Conservation", "Implement ridge-to-valley soil moisture conservation and continuous contour trenches (CCT) on upper slope lands to enhance infiltration lag time."),
+                ("Micro-Irrigation Adoption", "Promote expanded drip and micro-sprinkler irrigation systems for fig, vegetable, and orchard farming to optimize irrigation water efficiency."),
                 ("Rooftop Rainwater Harvesting", "Incentivize injection well recharge and direct rooftop harvesting for institutional, gram panchayat, and residential structures.")
             ]
         }
-    else:  # Shallow (< 4.0 m)
+    elif cat == "Shallow":
         return {
             "category": "Shallow",
             "tier_label": "Shallow (< 4.0 m)",
             "icon": "🟢",
             "color": "#0F766E",
             "badge": "badge-shallow",
-            "priority": "Sustainable Level Maintained",
-            "priority_level": "Shallow Phreatic Tier (< 4.0 m MBGL)",
+            "priority": "Equilibrium Maintenance & Monitoring Advisory",
+            "priority_level": "Shallow Reference Tier (< 4.0 m MBGL)",
             "actions": [
-                ("Aquifer Maintenance & Monitoring", "Continue systematic quarterly water level observation; avoid concentrated deep extraction that could induce localized drawdown cones."),
-                ("Community Water Budgeting", "Conduct bi-annual village participatory water audits at Gram Sabha meetings prior to rabi cropping season to maintain safe yields.")
+                ("Aquifer Monitoring & Vigilance", "Continue systematic quarterly water level observation; avoid concentrated deep extraction that could induce localized drawdown cones."),
+                ("Participatory Community Water Budgeting", "Conduct bi-annual village participatory water audits at Gram Sabha meetings prior to rabi cropping season to maintain safe yields.")
+            ]
+        }
+    else:  # Unknown / Invalid / Missing depth
+        return {
+            "category": "Unknown",
+            "tier_label": "Unknown / Unclassified",
+            "icon": "⚪",
+            "color": "#64748B",
+            "badge": "badge-unknown",
+            "priority": "Telemetry Unavailable / Unclassified",
+            "priority_level": "Data Incomplete (Unrecorded MBGL)",
+            "actions": [
+                ("Verify Station Telemetry", "Observation depth is missing, invalid, or unrecorded. Confirm physical well monitoring records before assessing hydrogeological status."),
+                ("Conduct In-Situ Measurement", "Perform in-situ manual sounder or acoustic probe measurement to establish current water table depth before formulating watershed interventions.")
             ]
         }

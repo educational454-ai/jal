@@ -2,7 +2,7 @@
 import pandas as pd
 import streamlit as st
 
-from services.data_loader import get_latest_per_station
+from services.data_loader import get_latest_per_station, get_depth_tier_category
 from services.metrics_service import get_model_metrics
 from components.metric_cards import render_overview_kpis, render_depth_distribution_bar
 from components.callouts import render_depth_tier_note
@@ -31,9 +31,10 @@ def render_overview_screen(df: pd.DataFrame, models: dict) -> None:
     model_metrics = get_model_metrics(meta)
     rf_mae_eval = model_metrics['rf_mae']
     
-    deep_count = int((latest_per_station['gw_level_mbgl'] > 8.0).sum())
-    moderate_count = int(((latest_per_station['gw_level_mbgl'] >= 4.0) & (latest_per_station['gw_level_mbgl'] <= 8.0)).sum())
-    shallow_count = int((latest_per_station['gw_level_mbgl'] < 4.0).sum())
+    categories = latest_per_station['gw_level_mbgl'].apply(get_depth_tier_category)
+    deep_count = int((categories == "Deep").sum())
+    moderate_count = int((categories == "Moderate").sum())
+    shallow_count = int((categories == "Shallow").sum())
     
     # Primary Dynamically Computed KPI Row
     render_overview_kpis(

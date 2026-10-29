@@ -7,8 +7,10 @@ def render_kpi_card(label: str, value: str, caption: str) -> None:
     st.markdown(
         f"""
         <div class="kpi-card">
-            <div class="kpi-label">{label}</div>
-            <div class="kpi-value">{value}</div>
+            <div class="kpi-top">
+                <div class="kpi-label">{label}</div>
+                <div class="kpi-value">{value}</div>
+            </div>
             <div class="kpi-caption">{caption}</div>
         </div>
         """,
@@ -72,10 +74,14 @@ def render_evaluation_result_cards(rf_mae: float, rf_rmse: float, rf_r2: float,
         st.markdown(
             f"""
             <div class='metric-card'>
-                <b>Random Forest Model</b><br>
-                • MAE: <b>{rf_mae:.3f} m</b><br>
-                • RMSE: <b>{rf_rmse:.3f} m</b><br>
-                • R²: <b>{rf_r2:.3f}</b>
+                <div class='metric-card-content'>
+                    <div class='metric-card-title'>Random Forest Model</div>
+                    <div class='metric-card-body'>
+                        • MAE: <b>{rf_mae:.3f} m</b><br>
+                        • RMSE: <b>{rf_rmse:.3f} m</b><br>
+                        • R²: <b>{rf_r2:.3f}</b>
+                    </div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True
@@ -84,10 +90,14 @@ def render_evaluation_result_cards(rf_mae: float, rf_rmse: float, rf_r2: float,
         st.markdown(
             f"""
             <div class='metric-card'>
-                <b>Persistence Baseline</b><br>
-                • MAE: <b>{pers_mae:.3f} m</b><br>
-                • RMSE: <b>{pers_rmse:.3f} m</b><br>
-                • Error Reduction: <b>{err_reduction:.1f}%</b> lower MAE
+                <div class='metric-card-content'>
+                    <div class='metric-card-title'>Persistence Baseline</div>
+                    <div class='metric-card-body'>
+                        • MAE: <b>{pers_mae:.3f} m</b><br>
+                        • RMSE: <b>{pers_rmse:.3f} m</b><br>
+                        • Error Reduction: <b>{err_reduction:.1f}%</b> lower MAE
+                    </div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True
@@ -96,11 +106,17 @@ def render_evaluation_result_cards(rf_mae: float, rf_rmse: float, rf_r2: float,
         st.markdown(
             f"""
             <div class='metric-card'>
-                <b>Uncalibrated q10–q90 Prediction Band</b><br>
-                • Empirical Test Coverage: <b>{emp_cov:.2f}%</b><br>
-                • Nominal Target: 80.0% (Undercoverage)<br>
-                • Measured Average Width: <b>{avg_width:.2f} m</b><br>
-                <span style='color: #F87171; font-size: 0.78rem;'>*Does not guarantee future coverage*</span>
+                <div class='metric-card-content'>
+                    <div class='metric-card-title'>Uncalibrated q10–q90 Prediction Band</div>
+                    <div class='metric-card-body'>
+                        • Empirical Test Coverage: <b>{emp_cov:.2f}%</b><br>
+                        • Nominal Target: 80.0% (Undercoverage)<br>
+                        • Measured Average Width: <b>{avg_width:.2f} m</b>
+                    </div>
+                </div>
+                <div class='metric-card-caveat' style='margin-top: 6px;'>
+                    <span style='color: var(--badge-deep-text); font-size: 0.78rem;'>*Does not guarantee future coverage*</span>
+                </div>
             </div>
             """,
             unsafe_allow_html=True

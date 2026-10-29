@@ -72,7 +72,7 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
             overall_h = horizon_stats['overall']
             
             st.markdown("#### **🔮 Next-Observation Groundwater Forecast**")
-            k1, k2, k3 = st.columns([0.9, 1.75, 0.95])
+            k1, k2, k3 = st.columns([0.95, 1.8, 1.0])
             with k1:
                 st.metric(
                     "Projected Depth", f"{pred_val:.2f} m", 
@@ -86,7 +86,7 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
                 )
             with k3:
                 status, color, badge = get_status(pred_val)
-                st.markdown(f"**Estimated Status:**<br><span class='{badge}'>{status}</span>", unsafe_allow_html=True)
+                st.markdown(f"<div style='padding-top: 4px;'><b>Estimated Status:</b><br><span class='{badge}' style='margin-top: 6px; display: inline-block;'>{status}</span></div>", unsafe_allow_html=True)
                 
             st.markdown("##### **⏱️ Forecast Horizon Context (Next-Observation Schedule)**")
             render_horizon_callout(test_h, overall_h)
