@@ -1,4 +1,4 @@
-"""Sidebar navigation and telemetry context component."""
+"""Sidebar navigation and branding component."""
 import streamlit as st
 from styles.theme import get_current_theme
 
@@ -13,54 +13,50 @@ def render_sidebar() -> str:
         st.markdown("""
         <div class="sidebar-brand">
             <div class="sidebar-brand-name">💧 BhujalDrishti</div>
-            <div class="sidebar-brand-tagline">Environmental Intelligence System</div>
+            <div class="sidebar-brand-tagline">JalRakshak AI • Groundwater Intelligence</div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Working Light / Dark Theme Switcher
+        # Simplified Light / Dark Theme Switcher
         current_theme = get_current_theme()
         theme_index = 0 if current_theme == "light" else 1
         selected_theme_label = st.radio(
-            "Interface Theme",
-            ["☀️ Light Theme", "🌙 Dark Theme (Aqua)"],
+            "Theme",
+            ["☀️ Light", "🌙 Dark"],
             index=theme_index,
             horizontal=True,
-            key="theme_selector_radio"
+            key="theme_selector_radio",
+            label_visibility="collapsed"
         )
         new_theme = "light" if "Light" in selected_theme_label else "dark"
         if new_theme != current_theme:
             st.session_state["app_theme"] = new_theme
             st.rerun()
             
-        st.markdown("---")
+        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
         
         # Screen Navigation
         screen = st.radio(
             "Navigation",
             [
-                "📊 Screen 1: Overview Dashboard",
-                "🗺️ Screen 2: Groundwater Map",
-                "🔮 Screen 3: Next-Observation Forecast",
-                "🛡️ Screen 4: Decision Support"
+                "📊 Overview Dashboard",
+                "🗺️ Groundwater Map",
+                "🔮 Next-Observation Forecast",
+                "🛡️ Decision Support"
             ],
             index=0,
             label_visibility="collapsed"
         )
         
-        st.markdown("---")
-        st.markdown("##### **Telemetry Network Context**")
+        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
+        
+        # Compact, non-intrusive research prototype footer
         st.markdown("""
-        <div class="telemetry-box">
-            • <b>Jurisdiction:</b> Purandar Taluka (Pune, MH)<br>
-            • <b>Administrative Area:</b> ~1,105 km²<br>
-            • <b>Aquifer Formation:</b> Deccan Basalt Flows<br>
-            • <b>CGWB Monitoring:</b> 11 In-situ Observation Wells<br>
-            • <b>Rainfall Grid:</b> 4 IMD Points (0.25° resolution)<br>
-            • <b>Extrapolated Wells:</b> 4 Southern/Western Stations<br>
-            • <b>Validation Split:</b> Zero-Target-Leakage Chronological Split (Train: 1996–2017, Test: 2018–2023)
+        <div class="sidebar-footer">
+            <span class="sidebar-footer-badge">Research Prototype</span>
+            <div class="sidebar-footer-sub">Purandar Taluka CGWB Telemetry</div>
         </div>
         """, unsafe_allow_html=True)
         
-        st.caption("ℹ️ *Academic research decision-support prototype. Predictions are statistical estimates, not physical measurements.*")
-        
     return screen
+

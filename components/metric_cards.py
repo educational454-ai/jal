@@ -1,4 +1,5 @@
 """Reusable KPI and metric card components for BhujalDrishti."""
+import textwrap
 import streamlit as st
 
 
@@ -18,33 +19,85 @@ def render_kpi_card(label: str, value: str, caption: str) -> None:
     )
 
 
-def render_overview_kpis(avg_mbgl: float, station_count: int, total_records: int, rf_mae: float) -> None:
-    """Render the primary 4-column overview KPI grid."""
-    k1, k2, k3, k4 = st.columns(4)
+def render_overview_kpis(avg_mbgl: float, station_count: int, total_records: int, rf_mae: float = None) -> None:
+    """Render the primary 3-column overview KPI grid."""
+    k1, k2, k3 = st.columns(3)
     with k1:
         render_kpi_card(
             label="Mean Water Table Depth",
             value=f"{avg_mbgl:.2f} m",
-            caption=f"Meters Below Ground Level (MBGL) across {station_count} stations at latest record."
+            caption=f"Meters Below Ground Level (MBGL) across {station_count} reporting stations."
         )
     with k2:
         render_kpi_card(
-            label="Monitoring Network",
+            label="Monitoring Wells",
             value=f"{station_count} Wells",
-            caption="Active CGWB in-situ manual monitoring stations (~1 well per 100 km²)."
+            caption="In-situ manual CGWB monitoring network across Purandar Taluka."
         )
     with k3:
         render_kpi_card(
-            label="Historical Time Series",
+            label="Historical Observations",
             value=f"{total_records} Records",
-            caption="Quality-verified quarterly observations spanning 1996 through 2023."
+            caption="Quality-verified discrete observations spanning 1996 through 2023."
         )
-    with k4:
-        render_kpi_card(
-            label="Held-Out Model MAE",
-            value=f"{rf_mae:.3f} m",
-            caption="Random Forest next-observation forecast error on 2018–2023 test set (n=124)."
-        )
+
+
+def render_depth_distribution_summary(shallow_count: int, moderate_count: int, deep_count: int, total_count: int) -> None:
+    """Render a compact, elegant depth distribution breakdown card with segmented progress bar."""
+    pct_shallow = (shallow_count / total_count * 100) if total_count else 0
+    pct_moderate = (moderate_count / total_count * 100) if total_count else 0
+    pct_deep = (deep_count / total_count * 100) if total_count else 0
+
+    card_html = textwrap.dedent(f"""
+    <div class="depth-dist-card">
+        <div class="depth-dist-header">
+            <span class="depth-dist-title">Current Depth Stratification</span>
+            <span class="depth-dist-subtitle">Latest observation per station ({total_count} wells)</span>
+        </div>
+        <div class="depth-dist-bar-track">
+            <div class="depth-dist-bar-seg seg-shallow" style="width: {pct_shallow:.1f}%;" title="Shallow: {shallow_count} ({pct_shallow:.1f}%)"></div>
+            <div class="depth-dist-bar-seg seg-moderate" style="width: {pct_moderate:.1f}%;" title="Moderate: {moderate_count} ({pct_moderate:.1f}%)"></div>
+            <div class="depth-dist-bar-seg seg-deep" style="width: {pct_deep:.1f}%;" title="Deep: {deep_count} ({pct_deep:.1f}%)"></div>
+        </div>
+        <div class="depth-dist-rows">
+            <div class="depth-dist-row">
+                <div class="depth-dist-cat">
+                    <span class="depth-dist-dot dot-shallow"></span>
+                    <span class="depth-dist-name">Shallow (&lt; 4.0 m MBGL)</span>
+                </div>
+                <div class="depth-dist-val">
+                    <span class="depth-dist-count">{shallow_count} wells</span>
+                    <span class="depth-dist-pct">({pct_shallow:.1f}%)</span>
+                </div>
+            </div>
+            <div class="depth-dist-row">
+                <div class="depth-dist-cat">
+                    <span class="depth-dist-dot dot-moderate"></span>
+                    <span class="depth-dist-name">Moderate (4.0–8.0 m MBGL)</span>
+                </div>
+                <div class="depth-dist-val">
+                    <span class="depth-dist-count">{moderate_count} wells</span>
+                    <span class="depth-dist-pct">({pct_moderate:.1f}%)</span>
+                </div>
+            </div>
+            <div class="depth-dist-row">
+                <div class="depth-dist-cat">
+                    <span class="depth-dist-dot dot-deep"></span>
+                    <span class="depth-dist-name">Deep (&gt; 8.0 m MBGL)</span>
+                </div>
+                <div class="depth-dist-val">
+                    <span class="depth-dist-count">{deep_count} wells</span>
+                    <span class="depth-dist-pct">({pct_deep:.1f}%)</span>
+                </div>
+            </div>
+        </div>
+        <div class="depth-dist-note">
+            ℹ️ Depth bands are project-defined reference ranges, not official CGWB groundwater-status classifications.
+        </div>
+    </div>
+    """).strip()
+
+    st.markdown(card_html, unsafe_allow_html=True)
 
 
 def render_depth_distribution_bar(shallow_count: int, moderate_count: int, deep_count: int, total_count: int) -> None:

@@ -5,9 +5,15 @@ from components.metric_cards import (
     render_kpi_card,
     render_overview_kpis,
     render_depth_distribution_bar,
+    render_depth_distribution_summary,
     render_evaluation_result_cards,
 )
-from components.charts import render_rainfall_groundwater_chart, render_station_history_chart
+from components.charts import (
+    render_rainfall_groundwater_chart,
+    render_station_history_chart,
+    render_regional_groundwater_chart,
+    render_compact_rainfall_chart,
+)
 from components.tables import render_latest_stations_table
 from components.map_view import render_groundwater_map
 from components.callouts import (
@@ -25,9 +31,12 @@ __all__ = [
     "render_kpi_card",
     "render_overview_kpis",
     "render_depth_distribution_bar",
+    "render_depth_distribution_summary",
     "render_evaluation_result_cards",
     "render_rainfall_groundwater_chart",
     "render_station_history_chart",
+    "render_regional_groundwater_chart",
+    "render_compact_rainfall_chart",
     "render_latest_stations_table",
     "render_groundwater_map",
     "render_depth_tier_note",

@@ -58,14 +58,14 @@ render_research_header(theme=current_theme)
 # -------------------------------------------------------------
 # Modular Screen Router
 # -------------------------------------------------------------
-if selected_screen == "📊 Screen 1: Overview Dashboard":
+if "Overview" in selected_screen:
     render_overview_screen(df, models)
 
-elif selected_screen == "🗺️ Screen 2: Groundwater Map":
+elif "Map" in selected_screen:
     render_groundwater_map_screen(df)
 
-elif selected_screen == "🔮 Screen 3: Next-Observation Forecast":
+elif "Forecast" in selected_screen:
     render_forecast_screen(df, models)
 
-elif selected_screen == "🛡️ Screen 4: Decision Support":
+elif "Decision" in selected_screen:
     render_decision_support_screen(df)

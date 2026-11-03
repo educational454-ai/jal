@@ -10,29 +10,37 @@ from styles.theme import get_current_theme
 
 def render_groundwater_map_screen(df: pd.DataFrame) -> None:
     """Render Screen 2: Groundwater Map."""
+    # A. Page Heading (Restrained, scientific, consistent with Screen 1)
     st.markdown("""
     <div class="screen-header-block">
-        <div class="main-header">🗺️ Purandar Groundwater Telemetry Map</div>
-        <div class="sub-header">Observed station telemetry across 11 CGWB monitoring wells with standardized depth color coding</div>
+        <div class="main-header">Purandar Groundwater Telemetry Map</div>
+        <div class="sub-header">In-situ water level observations across 11 CGWB monitoring wells · Purandar Taluka</div>
     </div>
     """, unsafe_allow_html=True)
     
     latest_st = get_latest_per_station(df)
     active_theme = get_current_theme()
     
-    c_m1, c_m2 = st.columns([3, 1])
-    with c_m2:
-        st.markdown("#### **Map Controls & Legend**")
+    # B. GIS Controls and Depth Tier Legend Toolbar
+    c_legend, c_filter = st.columns([1.9, 1.1])
+    with c_legend:
         st.markdown("""
-        - 🟢 **Shallow Depth**: $< 4.0\\text{ m}$ MBGL *(water close to surface)*
-        - 🟡 **Moderate Depth**: $4.0 - 8.0\\text{ m}$ MBGL
-        - 🔴 **Deep Water Table**: $> 8.0\\text{ m}$ MBGL *(localized/seasonal drawdown)*
-        """)
-        st.caption("Fixed-size markers indicate observed in-situ water levels at CGWB stations. Color represents depth below ground surface based on physical reference bands.")
+        <div class="map-legend-bar">
+            <span class="map-legend-title">Depth Tiers:</span>
+            <span class="badge-shallow" title="Shallow: < 4.0 m MBGL">● Shallow (&lt; 4.0 m)</span>
+            <span class="badge-moderate" title="Moderate: 4.0–8.0 m MBGL">● Moderate (4.0–8.0 m)</span>
+            <span class="badge-deep" title="Deep: > 8.0 m MBGL">● Deep (&gt; 8.0 m)</span>
+        </div>
+        """, unsafe_allow_html=True)
         
+    with c_filter:
         selected_zone_filter = st.selectbox(
-            "Filter by Depth Tier", 
-            ["All Stations", "Shallow (< 4.0 m)", "Moderate (4.0–8.0 m)", "Deep (> 8.0 m)"]
+            "Filter Stations by Depth Tier", 
+            ["All Stations", "Shallow (< 4.0 m)", "Moderate (4.0–8.0 m)", "Deep (> 8.0 m)"],
+            index=0,
+            key="map_depth_filter_select",
+            label_visibility="collapsed",
+            help="Filter map markers to display all stations or only stations within a specific depth tier."
         )
         
     filtered_stations = latest_st.copy()
@@ -50,10 +58,11 @@ def render_groundwater_map_screen(df: pd.DataFrame) -> None:
             filtered_stations['gw_level_mbgl'].apply(get_depth_tier_category) == target_category
         ]
         
-    with c_m1:
-        render_groundwater_map(filtered_stations, theme=active_theme)
+    # C. Interactive Map View (Full Width with comfortable 560px height)
+    render_groundwater_map(filtered_stations, theme=active_theme)
 
-    st.caption("ℹ️ *Note: Station markers display physical in-situ measurements at fixed CGWB monitoring wells. Point color denotes observed water level in Meters Below Ground Level (MBGL). Reference bands (<4m, 4–8m, >8m) are project-defined physical tiers, not official administrative categories.*")
+    # D. Methodological Disclaimers and Spatial Layer Research Context
+    st.caption("ℹ️ *Note: Station markers display physical in-situ measurements at fixed CGWB monitoring wells. Point color denotes observed water level in Meters Below Ground Level (MBGL). Reference bands (< 4.0 m, 4.0–8.0 m, > 8.0 m) are project-defined physical tiers, not official administrative categories.*")
     
     # Methodological findings on spatial interpolation and LOSO-CV
     render_spatial_model_status_expander()

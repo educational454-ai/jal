@@ -50,7 +50,7 @@ def render_horizon_callout(test_h: dict, overall_h: dict) -> None:
 
 def render_spatial_model_status_expander() -> None:
     """Render research findings on spatial interpolation and LOSO-CV."""
-    with st.expander("🔬 **Spatial Prediction Layer Status (Why continuous heatmap interpolation is withheld)**"):
+    with st.expander("🔬 **Spatial Prediction Layer Status (Why continuous heatmap interpolation is withheld)**", expanded=False):
         st.markdown("""
         **Investigation Findings on `rf_mapping_model.joblib`:**
         - **Evaluation Deflation via Spatial Leave-One-Station-Out Validation**: While standard temporal evaluation on known station locations indicated $R^2 = 0.59$, rigorous **Leave-One-Station-Out Cross-Validation (LOSO-CV)** revealed an overall $R^2 = 0.022$ and severely negative $R^2$ values for individual stations (e.g., Pimpri: $R^2 = -8.79$, Saswad: $R^2 = -3.14$, Kamatwadi-Walha: $R^2 = -1.13$).
@@ -62,7 +62,7 @@ def render_spatial_model_status_expander() -> None:
 
 def render_cqr_calibration_expander() -> None:
     """Render findings on prediction intervals and conformal prediction trade-offs."""
-    with st.expander("📐 **Prediction Interval Calibration & Conformal Prediction Analysis**"):
+    with st.expander("📐 **Prediction Interval Calibration & Conformal Prediction Analysis**", expanded=False):
         st.markdown("""
         **Uncalibrated Quantile Model Status:**
         - The current `q10` and `q90` Gradient Boosting models target nominal 80% coverage (10th to 90th percentiles).

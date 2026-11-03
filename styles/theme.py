@@ -119,6 +119,7 @@ def apply_theme(theme: str = None) -> None:
             --bg-primary: {palette['bg_primary']};
             --bg-secondary: {palette['bg_secondary']};
             --bg-surface: {palette['bg_surface']};
+            --bg-surface-hover: {palette.get('bg_surface_hover', palette['bg_surface'])};
             --border-color: {palette['border']};
             --text-primary: {palette['text_primary']};
             --text-secondary: {palette['text_secondary']};
@@ -166,7 +167,9 @@ def apply_theme(theme: str = None) -> None:
         section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] span {{
             color: {palette['text_primary']} !important;
         }}
-        section[data-testid="stSidebar"] hr {{
+        section[data-testid="stSidebar"] hr,
+        section[data-testid="stSidebar"] .sidebar-divider {{
+            background-color: {palette['sidebar_border']} !important;
             border-color: {palette['sidebar_border']} !important;
         }}
         section[data-testid="stSidebar"] .sidebar-brand-name {{
@@ -174,6 +177,22 @@ def apply_theme(theme: str = None) -> None:
         }}
         section[data-testid="stSidebar"] .sidebar-brand-tagline {{
             color: {palette['teal_accent']} !important;
+        }}
+        section[data-testid="stSidebar"] .sidebar-footer-sub {{
+            color: {palette['text_muted']} !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover {{
+            background-color: {palette['bg_surface_hover']} !important;
+        }}
+        .telemetry-card {{
+            background-color: {palette['bg_surface']} !important;
+            border: 1px solid {palette['border']} !important;
+        }}
+        .telemetry-card-label {{
+            color: {palette['text_muted']} !important;
+        }}
+        .telemetry-card-value {{
+            color: {palette['text_primary']} !important;
         }}
         section[data-testid="stSidebar"] .telemetry-box {{
             background-color: {palette['bg_surface']} !important;
@@ -264,11 +283,69 @@ def apply_theme(theme: str = None) -> None:
             height: 100% !important;
         }}
 
-        /* Dropdowns & Select Components */
+        /* Dropdowns & Select Components (Theme-aware borders, no red outlines, accessible focus) */
+        div[data-testid="stSelectbox"] div[data-rac][role="group"],
+        div[data-testid="stSelectbox"] .react-aria-ComboBox div[role="group"],
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
         div[data-baseweb="select"] > div {{
             background-color: {palette['bg_surface']} !important;
+            border: 1px solid {palette['border']} !important;
             border-color: {palette['border']} !important;
+            border-radius: 8px !important;
             color: {palette['text_primary']} !important;
+            box-shadow: none !important;
+            outline: none !important;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+        }}
+
+        div[data-testid="stSelectbox"] div[data-rac][role="group"]:hover,
+        div[data-testid="stSelectbox"] .react-aria-ComboBox div[role="group"]:hover,
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover,
+        div[data-baseweb="select"] > div:hover {{
+            border-color: {palette['teal_accent']} !important;
+        }}
+
+        /* Accessible Keyboard and Active Focus State */
+        div[data-testid="stSelectbox"] div[data-rac][role="group"]:focus-within,
+        div[data-testid="stSelectbox"] .react-aria-ComboBox div[role="group"]:focus-within,
+        div[data-testid="stSelectbox"] div[data-rac][role="group"][data-focused="true"],
+        div[data-testid="stSelectbox"] div[data-baseweb="select"]:focus-within > div,
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within,
+        div[data-baseweb="select"]:focus-within > div,
+        div[data-baseweb="select"] > div:focus-within {{
+            border-color: {palette['teal_accent']} !important;
+            box-shadow: 0 0 0 2px rgba(var(--teal-accent-rgb), 0.28) !important;
+            outline: none !important;
+        }}
+
+        /* Inputs, buttons and text inside selectbox */
+        div[data-testid="stSelectbox"] input,
+        div[data-testid="stSelectbox"] input[data-rac] {{
+            color: {palette['text_primary']} !important;
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
+        }}
+
+        div[data-testid="stSelectbox"] button[data-rac] {{
+            color: {palette['text_secondary']} !important;
+            border: none !important;
+            outline: none !important;
+        }}
+
+        /* Suppress unwanted red outline from normal and internal elements */
+        div[data-baseweb="select"] *,
+        div[data-testid="stSelectbox"] * {{
+            outline-color: transparent !important;
+        }}
+
+        div[data-testid="stSelectbox"] div[data-rac][role="group"]:focus-visible,
+        div[data-testid="stSelectbox"] input:focus-visible,
+        div[data-baseweb="select"]:focus-visible,
+        div[data-testid="stSelectbox"]:focus-visible,
+        div[data-baseweb="select"] input:focus-visible {{
+            outline: 2px solid {palette['teal_accent']} !important;
+            outline-offset: 1px !important;
         }}
 
         /* Targeted Streamlit Alert Theming & Contrast Protection */
