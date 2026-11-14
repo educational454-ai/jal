@@ -119,7 +119,8 @@ def render_depth_distribution_bar(shallow_count: int, moderate_count: int, deep_
 
 def render_evaluation_result_cards(rf_mae: float, rf_rmse: float, rf_r2: float,
                                   pers_mae: float, pers_rmse: float,
-                                  emp_cov: float, avg_width: float) -> None:
+                                  emp_cov: float, avg_width: float,
+                                  pers_r2: float = -0.233) -> None:
     """Render the 3-column held-out evaluation summary cards."""
     err_reduction = ((pers_mae - rf_mae) / pers_mae) * 100.0 if pers_mae else 0.0
     m1, m2, m3 = st.columns(3)
@@ -148,6 +149,7 @@ def render_evaluation_result_cards(rf_mae: float, rf_rmse: float, rf_r2: float,
                     <div class='metric-card-body'>
                         • MAE: <b>{pers_mae:.3f} m</b><br>
                         • RMSE: <b>{pers_rmse:.3f} m</b><br>
+                        • R²: <b>{pers_r2:.3f}</b><br>
                         • Error Reduction: <b>{err_reduction:.1f}%</b> lower MAE
                     </div>
                 </div>

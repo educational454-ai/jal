@@ -174,15 +174,29 @@ def render_compact_rainfall_chart(df: pd.DataFrame, theme: str = "light") -> Non
     st.caption("ℹ️ *Preceding 365-day cumulative rainfall lookback averaged across reporting stations per calendar year.*")
 
 
-def render_rainfall_groundwater_chart(df: pd.DataFrame, theme: str = "light") -> None:
-    """Render dual-axis chart showing 365d antecedent rainfall vs groundwater level."""
+def render_rainfall_groundwater_chart(
+    df: pd.DataFrame, 
+    window_col: str = "rain_365d", 
+    theme: str = "light"
+) -> None:
+    """Render dual-axis chart showing antecedent rainfall vs groundwater level."""
     palette = get_theme_palette(theme)
+    window_labels = {
+        "rain_90d": "Preceding 90-Day Rainfall",
+        "rain_180d": "Preceding 180-Day Rainfall",
+        "rain_365d": "Preceding 365-Day Rainfall",
+    }
+    label_text = window_labels.get(window_col, "Preceding Rainfall")
+    
+    # Defensive check for window_col presence
+    actual_col = window_col if window_col in df.columns else "rain_365d"
+    
     annual_summary = df.groupby('year').agg({
         'gw_level_mbgl': 'mean',
-        'rain_365d': 'mean'
+        actual_col: 'mean'
     }).reset_index()
     
-    fig, ax1 = plt.subplots(figsize=(6.4, 3.9), dpi=115)
+    fig, ax1 = plt.subplots(figsize=(10.5, 3.8), dpi=120)
     
     # Theme-adaptive background & spines
     fig.patch.set_facecolor(palette['bg_surface'])
@@ -191,21 +205,25 @@ def render_rainfall_groundwater_chart(df: pd.DataFrame, theme: str = "light") ->
         spine.set_color(palette['border'])
         
     color_rain = palette['teal_accent']
-    ax1.set_xlabel('Calendar Year', fontsize=8.5, color=palette['text_primary'], labelpad=6)
-    ax1.set_ylabel('Mean Preceding 365d Rainfall (mm)', color=color_rain, fontsize=8.5)
-    ax1.bar(
+    ax1.set_xlabel('Calendar Year', fontsize=8.8, color=palette['text_primary'], labelpad=6)
+    ax1.set_ylabel(f'Mean {label_text} (mm)', color=color_rain, fontsize=8.8, labelpad=8)
+    bars = ax1.bar(
         annual_summary['year'], 
-        annual_summary['rain_365d'], 
+        annual_summary[actual_col], 
         color=color_rain, 
-        alpha=0.38, 
+        alpha=0.45, 
         edgecolor=color_rain, 
         linewidth=0.8,
-        width=0.65, 
-        label='Preceding 365d Rain (mm)'
+        width=0.68, 
+        label=f'{label_text} (mm, left axis)'
     )
-    ax1.tick_params(axis='y', labelcolor=color_rain, labelsize=8)
-    ax1.tick_params(axis='x', labelcolor=palette['text_secondary'], labelsize=8)
-    ax1.grid(True, linestyle=':', alpha=0.55, color=palette['border'])
+    ax1.tick_params(axis='y', labelcolor=color_rain, labelsize=8.2)
+    ax1.tick_params(axis='x', labelcolor=palette['text_secondary'], labelsize=8.2)
+    ax1.grid(True, linestyle=':', alpha=0.50, color=palette['border'])
+    
+    years = [y for y in range(1996, 2024, 2)]
+    ax1.set_xticks(years)
+    ax1.set_xlim(1995.2, 2023.8)
     
     # Groundwater Line (Right Inverted Axis)
     ax2 = ax1.twinx()
@@ -213,65 +231,299 @@ def render_rainfall_groundwater_chart(df: pd.DataFrame, theme: str = "light") ->
         spine.set_color(palette['border'])
         
     color_gw = palette['blue_accent']
-    ax2.set_ylabel('Mean Groundwater Depth (m MBGL) [Shallower ↑ / Deeper ↓]', color=color_gw, fontsize=8.5)
-    ax2.plot(
+    ax2.set_ylabel('Mean Groundwater Depth (m MBGL)\n[Shallower ↑ / Deeper ↓]', color=color_gw, fontsize=8.8, labelpad=8)
+    line = ax2.plot(
         annual_summary['year'], 
         annual_summary['gw_level_mbgl'], 
         color=color_gw, 
-        linewidth=2.0, 
+        linewidth=2.2, 
         marker='o', 
-        markersize=3.5, 
-        label='Mean Depth (m MBGL)'
+        markersize=4.2, 
+        label='Mean Water Table Depth (m MBGL, right inverted axis)'
     )
-    ax2.tick_params(axis='y', labelcolor=color_gw, labelsize=8)
+    ax2.tick_params(axis='y', labelcolor=color_gw, labelsize=8.2)
     ax2.invert_yaxis()
     
-    fig.tight_layout()
+    # Combined legend above plot area
+    handles = [bars, line[0]]
+    labels = [f'{label_text} (mm, left axis)', 'Groundwater Depth (m MBGL, right inverted axis)']
+    leg = ax1.legend(
+        handles, labels,
+        loc='upper center',
+        bbox_to_anchor=(0.5, 1.18),
+        ncol=2,
+        fontsize=8.0,
+        facecolor=palette['bg_surface'],
+        edgecolor=palette['border'],
+        framealpha=0.95
+    )
+    for text in leg.get_texts():
+        text.set_color(palette['text_primary'])
+        
+    fig.tight_layout(rect=[0, 0, 1, 0.90])
     st.pyplot(fig, use_container_width=True)
     plt.close(fig)
     
     st.caption(
-        "ℹ️ *Methodological Note: Rainfall bars represent the station-averaged 365-day cumulative antecedent precipitation lookbacks "
-        "preceding observation dates in each calendar year. Water table fluctuations reflect net dynamic hydrological balance "
-        "(precipitation infiltration, baseflow, and seasonal agricultural pumping extraction), rather than natural recharge alone.*"
+        f"ℹ️ *Annual historical comparison (1996–2023). Bars depict the station-averaged {label_text.lower()} "
+        "accumulated prior to observation dates in each calendar year. Line depicts the regional mean in-situ groundwater depth (inverted axis: top is shallower).* "
     )
 
 
-def render_station_history_chart(station_df: pd.DataFrame, station_name: str, theme: str = "light") -> None:
-    """Render historical water table fluctuation time series for a single monitoring well."""
+def render_station_history_chart(
+    station_df: pd.DataFrame, 
+    station_name: str,
+    pred_val: float | None = None,
+    lower_b: float | None = None,
+    upper_b: float | None = None,
+    pred_date: pd.Timestamp | None = None,
+    scenario_val: float | None = None,
+    rain_factor: int = 0,
+    theme: str = "light"
+) -> None:
+    """Render historical water table fluctuation time series for a single monitoring well,
+    with distinct machine-learning next-observation forecast and uncalibrated prediction bands.
+    """
     palette = get_theme_palette(theme)
-    fig, ax = plt.subplots(figsize=(10, 3.8), dpi=115)
+    fig, ax = plt.subplots(figsize=(10.5, 4.2), dpi=120)
     
+    # Theme-adaptive background & spines
     fig.patch.set_facecolor(palette['bg_surface'])
     ax.set_facecolor(palette['bg_secondary'])
     for spine in ax.spines.values():
         spine.set_color(palette['border'])
         
+    sorted_df = station_df.sort_values('date').copy()
     color_line = palette['blue_accent']
+    
+    # 1. Historical Observed Readings
     ax.plot(
-        station_df['date'], 
-        station_df['gw_level_mbgl'], 
+        sorted_df['date'], 
+        sorted_df['gw_level_mbgl'], 
         color=color_line, 
         marker='o', 
-        markersize=3, 
-        label='Observed Level (MBGL)', 
-        linewidth=1.8
+        markersize=3.6, 
+        label='Observed In-Situ Level (CGWB)', 
+        linewidth=1.9,
+        zorder=3
     )
     
-    ax.set_ylabel("Depth Below Ground Level (m MBGL)\n[Shallower ↑ / Deeper ↓]", color=palette['text_primary'], fontsize=8.5)
-    ax.set_xlabel("Year", color=palette['text_primary'], fontsize=8.5)
-    ax.tick_params(axis='both', labelcolor=palette['text_secondary'], labelsize=8)
-    ax.grid(True, linestyle='--', alpha=0.5, color=palette['border'])
+    # 2. Predicted Next Observation (if available)
+    if pred_val is not None and not sorted_df.empty:
+        last_date = sorted_df['date'].iloc[-1]
+        last_val = float(sorted_df['gw_level_mbgl'].iloc[-1])
+        
+        # If prediction date not provided, estimate using median horizon (~92 days)
+        if pred_date is None:
+            pred_date = last_date + pd.Timedelta(days=92)
+            
+        color_pred = '#D97706' if theme == 'light' else '#F59E0B'
+        
+        # A. Dashed trajectory connector from latest observation to next prediction
+        ax.plot(
+            [last_date, pred_date], 
+            [last_val, pred_val], 
+            color=color_pred, 
+            linestyle='--', 
+            linewidth=1.9, 
+            label='Forecast Step (Next Observation)',
+            zorder=4
+        )
+        
+        # B. Uncalibrated q10–q90 Prediction Band Error Bar
+        if lower_b is not None and upper_b is not None:
+            yerr_lower = max(0.0, pred_val - lower_b)
+            yerr_upper = max(0.0, upper_b - pred_val)
+            ax.errorbar(
+                [pred_date], 
+                [pred_val], 
+                yerr=[[yerr_lower], [yerr_upper]], 
+                fmt='none', 
+                ecolor='#B45309' if theme == 'light' else '#FBBF24', 
+                elinewidth=2.2, 
+                capsize=5, 
+                capthick=1.8, 
+                alpha=0.90, 
+                label=f'Uncalibrated q10–q90 Band ({lower_b:.2f}–{upper_b:.2f} m)',
+                zorder=4
+            )
+            
+        # C. Distinct Diamond Marker for Point Estimate
+        ax.plot(
+            [pred_date], 
+            [pred_val], 
+            marker='D', 
+            markersize=8.0, 
+            color=color_pred, 
+            markeredgecolor=palette['text_primary'], 
+            markeredgewidth=1.2, 
+            label=f'Predicted Next Obs: {pred_val:.2f} m MBGL',
+            zorder=6
+        )
+        
+        # D. Informative Annotation Callout
+        diff = pred_val - last_val
+        direction_txt = "Deeper" if diff > 0.05 else ("Shallower" if diff < -0.05 else "Stable")
+        annot_text = f"Predicted Next Obs\n{pred_val:.2f} m MBGL ({diff:+.2f} m {direction_txt})\nest. {pred_date.strftime('%b %Y')}"
+        y_offset = -24 if pred_val < last_val else 22
+        ax.annotate(
+            annot_text,
+            xy=(pred_date, pred_val),
+            xytext=(14, y_offset),
+            textcoords='offset points',
+            fontsize=7.8,
+            fontweight='600',
+            color=palette['text_primary'],
+            bbox=dict(
+                boxstyle='round,pad=0.35', 
+                facecolor=palette['bg_surface'], 
+                edgecolor=color_pred, 
+                alpha=0.92,
+                linewidth=1.1
+            ),
+            arrowprops=dict(
+                arrowstyle='->', 
+                connectionstyle='arc3,rad=0.15', 
+                color=color_pred, 
+                lw=1.2
+            ),
+            zorder=7
+        )
+        
+        # E. Simulated Scenario Marker (if rainfall factor != 0 and scenario provided)
+        if scenario_val is not None and rain_factor != 0:
+            color_scen = '#0D9488' if theme == 'light' else '#2DD4BF'
+            ax.plot(
+                [last_date, pred_date], 
+                [last_val, scenario_val], 
+                color=color_scen, 
+                linestyle=':', 
+                linewidth=1.7, 
+                label=f'Simulated ({rain_factor:+d}% Rain)',
+                zorder=4
+            )
+            ax.plot(
+                [pred_date], 
+                [scenario_val], 
+                marker='s', 
+                markersize=7.5, 
+                color=color_scen, 
+                markeredgecolor=palette['text_primary'], 
+                markeredgewidth=1.1, 
+                label=f'Simulated Scenario: {scenario_val:.2f} m MBGL',
+                zorder=6
+            )
     
-    # Reference thresholds
-    ax.axhline(4.0, color='#10B981', linestyle=':', label='Shallow Reference Band (<4m)')
-    ax.axhline(8.0, color='#EF4444', linestyle=':', label='Deep Reference Band (>8m)')
+    # 3. Project-Defined Physical Depth Reference Lines
+    ax.axhline(4.0, color='#10B981', linestyle=':', linewidth=1.2, label='Shallow Reference (< 4.0 m)')
+    ax.axhline(8.0, color='#EF4444', linestyle=':', linewidth=1.2, label='Deep Reference (> 8.0 m)')
+    
+    # 4. MBGL Axis Orientation: Inverted (0 at surface, deeper at bottom)
     ax.invert_yaxis()
     
-    leg = ax.legend(loc='lower left', facecolor=palette['bg_surface'], edgecolor=palette['border'])
+    ax.set_ylabel("Depth Below Ground Level (m MBGL)\n[Shallower ↑ / Deeper ↓]", color=palette['text_primary'], fontsize=8.6, labelpad=8)
+    ax.set_xlabel("Survey Date / Historical Timeline", color=palette['text_primary'], fontsize=8.6, labelpad=6)
+    ax.tick_params(axis='both', labelcolor=palette['text_secondary'], labelsize=8.2)
+    ax.grid(True, linestyle='--', alpha=0.45, color=palette['border'])
+    
+    # 5. Clean Theme-Aware Multi-Column Legend
+    leg = ax.legend(
+        loc='lower left', 
+        ncol=2,
+        fontsize=7.8,
+        facecolor=palette['bg_surface'], 
+        edgecolor=palette['border'],
+        framealpha=0.92
+    )
     for text in leg.get_texts():
         text.set_color(palette['text_primary'])
         
     fig.tight_layout()
     st.pyplot(fig, use_container_width=True)
     plt.close(fig)
+
+
+def render_seasonal_comparison_chart(yearly_summary: pd.DataFrame, theme: str = "light") -> None:
+    """Render May (Pre-Monsoon) vs November (Post-Monsoon) paired groundwater comparison chart."""
+    palette = get_theme_palette(theme)
+    fig, ax = plt.subplots(figsize=(10.5, 3.6), dpi=120)
+    
+    # Theme-adaptive background & spines
+    fig.patch.set_facecolor(palette['bg_surface'])
+    ax.set_facecolor(palette['bg_secondary'])
+    for spine in ax.spines.values():
+        spine.set_color(palette['border'])
+        
+    color_may = '#E67E22' if theme == 'dark' else '#D97706'
+    color_nov = palette['teal_accent']
+    color_fill = palette['blue_accent']
+    
+    # Fill between May and Nov to show the net seasonal rise
+    ax.fill_between(
+        yearly_summary['year'],
+        yearly_summary['may_mean'],
+        yearly_summary['nov_mean'],
+        color=color_fill,
+        alpha=0.22,
+        label='Seasonal Water-Table Rise'
+    )
+    
+    # May line (Pre-Monsoon)
+    ax.plot(
+        yearly_summary['year'],
+        yearly_summary['may_mean'],
+        color=color_may,
+        linewidth=2.0,
+        marker='o',
+        markersize=4.5,
+        label='Pre-Monsoon (May Mean MBGL)'
+    )
+    
+    # November line (Post-Monsoon)
+    ax.plot(
+        yearly_summary['year'],
+        yearly_summary['nov_mean'],
+        color=color_nov,
+        linewidth=2.0,
+        marker='s',
+        markersize=4.5,
+        label='Post-Monsoon (Nov Mean MBGL)'
+    )
+    
+    # Project-defined reference depth bands
+    ax.axhline(4.0, color='#10B981', linestyle='--', linewidth=1.1, alpha=0.75, label='Shallow Band (< 4.0 m)')
+    ax.axhline(8.0, color='#EF4444', linestyle='--', linewidth=1.1, alpha=0.75, label='Deep Band (> 8.0 m)')
+    
+    ax.set_ylabel("Groundwater Depth (m MBGL)\n[Shallower ↑ / Deeper ↓]", color=palette['text_primary'], fontsize=8.8, labelpad=8)
+    ax.set_xlabel("Calendar Year (Matched Observations)", color=palette['text_primary'], fontsize=8.8, labelpad=6)
+    ax.tick_params(axis='both', labelcolor=palette['text_secondary'], labelsize=8.2)
+    ax.grid(True, linestyle='--', alpha=0.45, color=palette['border'])
+    
+    # Set 2-year ticks across the historical span
+    years = [y for y in range(1996, 2024, 2)]
+    ax.set_xticks(years)
+    ax.set_xlim(1995.5, 2022.5)
+    
+    # Invert Y-axis so shallower water is at the top
+    ax.invert_yaxis()
+    
+    leg = ax.legend(
+        loc='upper center',
+        bbox_to_anchor=(0.5, 1.18),
+        ncol=5,
+        fontsize=7.8,
+        frameon=True,
+        facecolor=palette['bg_surface'],
+        edgecolor=palette['border'],
+        framealpha=0.95
+    )
+    for text in leg.get_texts():
+        text.set_color(palette['text_primary'])
+        
+    fig.tight_layout(rect=[0, 0, 1, 0.90])
+    st.pyplot(fig, use_container_width=True)
+    plt.close(fig)
+    st.caption(
+        "ℹ️ *Pre-Monsoon (May) vs Post-Monsoon (November) annual mean water table depths across strictly matched station-year observations (n=137 pairs, 1996–2022). "
+        "The shaded band depicts net seasonal water-table elevation gain following monsoon infiltration.*"
+    )

@@ -10,6 +10,7 @@ from components.charts import render_station_history_chart
 from components.callouts import (
     render_forecast_mbgl_info,
     render_horizon_callout,
+    render_forecast_methodology_expander,
     render_cqr_calibration_expander,
 )
 from styles.theme import get_current_theme
@@ -17,7 +18,7 @@ from styles.theme import get_current_theme
 
 def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
     """Render Screen 3: Next-Observation Forecast."""
-    # 1. Page Heading & MBGL Notice
+    # 1. Page Heading & Educational MBGL Notice
     st.markdown("""
     <div class="screen-header-block">
         <div class="main-header">Next-Observation Groundwater Forecast</div>
@@ -36,6 +37,7 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
         key="forecast_station_select",
         help="Select a CGWB monitoring station to view latest conditions, simulate rainfall scenarios, and generate machine learning forecasts."
     )
+    st.caption("ℹ️ *Station Eligibility: 9 of the 11 CGWB monitoring stations in Purandar Taluka are available for forecasting because the other 2 stations have fewer than 10 historical groundwater observations. These 2 stations remain fully included in the project's historical monitoring and geospatial map data; they are only excluded from this forecast selector.*")
     station_df = df[df['station'] == station_sel].sort_values('date').copy()
     latest_record = station_df.iloc[-1]
     active_theme = get_current_theme()
@@ -47,10 +49,16 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
 
     if 'forecast' in models and 'q10' in models and 'q90' in models and 'metadata' in models:
         meta = models['metadata']
-        pred_results = predict_next_observation(models, latest_record, rain_factor=rain_factor)
-        pred_val = float(pred_results['pred_val'])
-        lower_b = float(pred_results['lower_b'])
-        upper_b = float(pred_results['upper_b'])
+        
+        # A. Baseline point estimate and prediction interval (0% adjustment)
+        base_results = predict_next_observation(models, latest_record, rain_factor=0)
+        pred_val = float(base_results['pred_val'])
+        lower_b = float(base_results['lower_b'])
+        upper_b = float(base_results['upper_b'])
+        
+        # B. Simulated hypothetical scenario prediction (slider adjustment)
+        scen_results = predict_next_observation(models, latest_record, rain_factor=rain_factor)
+        scen_val = float(scen_results['pred_val'])
         
         # Exact evaluation metrics from metadata
         model_metrics = get_model_metrics(meta)
@@ -62,26 +70,36 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
         test_h = horizon_stats['test']
         overall_h = horizon_stats['overall']
         
+        # Current station telemetry details
         current_mbgl = float(latest_record['gw_level_mbgl'])
+        latest_date = pd.to_datetime(latest_record['date'])
+        
+        # Estimated forecast horizon based on held-out test median
+        median_days = int(test_h['median_days'])
+        est_pred_date = latest_date + pd.Timedelta(days=median_days)
+        
+        # Predicted direction of change vs current observation
         diff_val = pred_val - current_mbgl
-        if diff_val > 0.005:
-            delta_pill = f'<span class="forecast-delta-pill forecast-delta-deeper">↑ +{diff_val:.2f} m vs current</span>'
-        elif diff_val < -0.005:
-            delta_pill = f'<span class="forecast-delta-pill forecast-delta-shallower">↓ {diff_val:.2f} m vs current</span>'
+        if diff_val > 0.05:
+            direction_name = "Deeper (water table falls)"
+            delta_pill = f'<span class="forecast-delta-pill forecast-delta-deeper">↑ +{diff_val:.2f} m (Deeper)</span>'
+        elif diff_val < -0.05:
+            direction_name = "Shallower (water table rises)"
+            delta_pill = f'<span class="forecast-delta-pill forecast-delta-shallower">↓ {diff_val:.2f} m (Shallower)</span>'
         else:
-            delta_pill = '<span class="forecast-delta-pill" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);">0.00 m vs current</span>'
+            direction_name = "Approximately Stable (±0.05 m)"
+            delta_pill = f'<span class="forecast-delta-pill" style="background-color: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);">~ {diff_val:+.2f} m (Stable)</span>'
             
         status, color, badge = get_status(pred_val)
         
-        # 3 & 4. Visually Prominent Forecast Summary & Latest Known Conditions Card
+        # 3. Visually Prominent Forecast Summary & Latest Known Conditions Card
         c_fc, c_cond = st.columns([1.6, 1.4])
         
         with c_fc:
-            sim_badge = f' · Simulated ({rain_factor:+d}% rain)' if rain_factor != 0 else ''
             fc_html = f"""
             <div class="forecast-summary-card">
                 <div>
-                    <div class="forecast-card-eyebrow">Random Forest Point Estimate · Next Observation{sim_badge}</div>
+                    <div class="forecast-card-eyebrow">Random Forest Point Estimate · Next CGWB Observation</div>
                     <div class="forecast-depth-display">
                         <span class="forecast-depth-val">{pred_val:.2f}</span>
                         <span class="forecast-depth-unit">m MBGL</span>
@@ -90,14 +108,24 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
                 </div>
                 <div class="forecast-meta-grid">
                     <div class="forecast-meta-item">
-                        <span class="forecast-meta-label">Uncalibrated q10–q90 Band</span>
-                        <span class="forecast-meta-value">{lower_b:.2f} m – {upper_b:.2f} m</span>
-                        <span class="forecast-meta-caption">Nominal 80% interval · Test coverage: {emp_cov:.1f}%</span>
+                        <span class="forecast-meta-label">Predicted Direction</span>
+                        <span class="forecast-meta-value">{direction_name}</span>
+                        <span class="forecast-meta-caption">Compared to {current_mbgl:.2f} m recorded on {latest_date.strftime('%d %b %Y')}</span>
                     </div>
                     <div class="forecast-meta-item">
                         <span class="forecast-meta-label">Estimated Depth Status</span>
                         <div><span class="{badge}" style="margin-top: 2px;">● {status}</span></div>
                         <span class="forecast-meta-caption">Project physical tier (&lt; 4m, 4–8m, &gt; 8m)</span>
+                    </div>
+                    <div class="forecast-meta-item">
+                        <span class="forecast-meta-label">Forecast Horizon Context</span>
+                        <span class="forecast-meta-value">~{median_days} days</span>
+                        <span class="forecast-meta-caption">Illustrative date: ~{est_pred_date.strftime('%b %Y')} (calculated from test median {median_days}d; not a station-specific survey schedule or model-predicted date)</span>
+                    </div>
+                    <div class="forecast-meta-item">
+                        <span class="forecast-meta-label">Uncalibrated q10–q90 Band</span>
+                        <span class="forecast-meta-value">{lower_b:.2f} m – {upper_b:.2f} m</span>
+                        <span class="forecast-meta-caption">Nominal 80% interval · Test coverage: {emp_cov:.1f}%</span>
                     </div>
                 </div>
             </div>
@@ -111,21 +139,21 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
                 '<span>⚠️</span><span>Outside 4-point IMD grid (lookback extrapolated)</span></div>'
             ) if is_extrap else (
                 '<div class="conditions-status-pill" style="background-color: rgba(16, 185, 129, 0.14); border: 1px solid var(--badge-shallow-border); color: var(--badge-shallow-text);">'
-                '<span>✓</span><span>Station within IMD grid bounding box</span></div>'
+                '<span>✓</span><span>Station within 4-point IMD grid coverage</span></div>'
             )
             
             cond_html = f"""
             <div class="conditions-card">
                 <div>
                     <div class="conditions-card-title">Latest Known Station Telemetry</div>
-                    <div class="conditions-card-sub">In-situ CGWB physical observation</div>
+                    <div class="conditions-card-sub">In-situ manual CGWB observation (Not live automated telemetry)</div>
                     <div class="conditions-row">
                         <span class="conditions-lbl">Station Name:</span>
                         <span class="conditions-val"><b>{station_sel}</b></span>
                     </div>
                     <div class="conditions-row">
                         <span class="conditions-lbl">Observation Date:</span>
-                        <span class="conditions-val">{latest_record['date'].strftime('%d %b %Y')}</span>
+                        <span class="conditions-val">{latest_date.strftime('%d %b %Y')}</span>
                     </div>
                     <div class="conditions-row">
                         <span class="conditions-lbl">Recorded Depth:</span>
@@ -145,18 +173,86 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
             """
             st.markdown(cond_html, unsafe_allow_html=True)
             
-        # 5. Hypothetical Rainfall Sensitivity Scenario
+        # 4. Historical vs Predicted Groundwater Chart
+        st.markdown("---")
+        st.subheader(f"Historical Observations & Next-Observation Forecast: {station_sel}")
+        render_station_history_chart(
+            station_df, 
+            station_sel, 
+            pred_val=pred_val, 
+            lower_b=lower_b, 
+            upper_b=upper_b, 
+            pred_date=est_pred_date,
+            scenario_val=scen_val,
+            rain_factor=rain_factor,
+            theme=active_theme
+        )
+        st.caption(
+            f"ℹ️ *Inverted y-axis (top is shallower, bottom is deeper MBGL). Points depict discrete in-situ CGWB physical soundings. "
+            f"The amber diamond denotes the model's next-observation point estimate ({pred_val:.2f} m MBGL) with its uncalibrated q10–q90 band "
+            f"({lower_b:.2f} m to {upper_b:.2f} m). Note: The displayed approximate {est_pred_date.strftime('%B %Y')} event date is illustrative, "
+            f"calculated using the overall held-out test-set median observation interval of 92 days; it is NOT a station-specific survey schedule "
+            f"or a date predicted by the model. No continuous curve or monthly intermediate values are fabricated.*"
+        )
+
+        # 5. Prediction Uncertainty & Interval Coverage Section
+        st.markdown("---")
+        st.subheader("Prediction Uncertainty: Uncalibrated q10–q90 Prediction Band")
+        unc_width = upper_b - lower_b
+        unc_html = f"""
+        <div class="uncertainty-card">
+            <div class="uncertainty-title">
+                <span>📐</span>
+                <span>Uncertainty Quantification for {station_sel} (Gradient Boosting Quantile Models)</span>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">
+                <b>Model Distinction:</b> The Random Forest produces the point estimate, while separate Gradient Boosting Quantile Models (<tt>q10</tt> and <tt>q90</tt>) produce the q10–q90 prediction interval. While targeting a nominal 80% coverage probability, out-of-sample evaluation confirms significant empirical undercoverage in Deccan basalt aquifers.
+            </div>
+            <div class="uncertainty-grid">
+                <div>
+                    <div class="uncertainty-item-lbl">Station Interval</div>
+                    <div class="uncertainty-item-val" style="color: var(--amber-accent, #F59E0B);">{lower_b:.2f} – {upper_b:.2f} m</div>
+                    <div class="uncertainty-item-sub">MBGL range for {station_sel}</div>
+                </div>
+                <div>
+                    <div class="uncertainty-item-lbl">Interval Span</div>
+                    <div class="uncertainty-item-val">{unc_width:.2f} m</div>
+                    <div class="uncertainty-item-sub">Selected station width</div>
+                </div>
+                <div>
+                    <div class="uncertainty-item-lbl">Empirical Test Coverage</div>
+                    <div class="uncertainty-item-val" style="color: var(--badge-moderate-text);">{emp_cov:.2f}%</div>
+                    <div class="uncertainty-item-sub">Nominal 80% (Miss rate: {100.0 - emp_cov:.1f}%)</div>
+                </div>
+                <div>
+                    <div class="uncertainty-item-lbl">Average Test Width</div>
+                    <div class="uncertainty-item-val">{avg_width:.2f} m</div>
+                    <div class="uncertainty-item-sub">Held-out test set mean</div>
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(unc_html, unsafe_allow_html=True)
+        st.caption(
+            "⚠️ *Important Scientific Clarification: The Random Forest produces the point estimate, while separate Gradient Boosting Quantile Models produce the q10–q90 interval. "
+            "This interval is an experimental uncertainty estimate with observed undercoverage (57.26% test coverage vs 80.0% nominal target); "
+            "it is NOT a calibrated 80% confidence interval. Actual model outputs are preserved without artificial widening.*"
+        )
+
+        # 6. Hypothetical Rainfall Sensitivity Scenario (What-If Analysis)
+        st.markdown("---")
+        st.subheader("Rainfall What-If Analysis (Hypothetical Sensitivity Simulation)")
         st.markdown("""
         <div class="sensitivity-card">
             <div class="sensitivity-header">
-                <div class="sensitivity-title">Hypothetical Rainfall Sensitivity Scenario</div>
-                <div class="sensitivity-sub">Simulate proportional scaling of antecedent 30d–365d cumulative rainfall features (-50% to +50%) to evaluate model sensitivity under drought or surplus monsoon conditions. Note: this is a sensitivity simulation, not a weather forecast.</div>
+                <div class="sensitivity-title">Simulate Antecedent Rainfall Scenarios (-50% to +50%)</div>
+                <div class="sensitivity-sub">Evaluate model responsiveness by applying uniform proportional scaling to antecedent cumulative rainfall features (30d, 90d, 180d, 365d) to simulate drought or surplus monsoon conditions. Note: this is a sensitivity simulation, not a weather forecast.</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
         
         st.slider(
-            "Simulate Antecedent Rainfall Adjustment (Hypothetical)",
+            "Hypothetical Rainfall Scaling Factor",
             min_value=-50,
             max_value=50,
             step=5,
@@ -164,13 +260,54 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
             key="forecast_rain_slider",
             help="Hypothetical sensitivity adjustment: scales antecedent 30d–365d cumulative rainfall features to simulate drought (-30%) or wet (+30%) conditions. Note: this is a sensitivity simulation, not a weather forecast."
         )
-        st.caption("ℹ️ *Applies proportional scaling to antecedent 30d–365d cumulative rainfall features as a sensitivity experiment, not a weather forecast.*")
 
-        # 6. Forecast Horizon Context
+        # Side-by-side scenario comparison cards
+        scen_delta = scen_val - pred_val
+        if scen_delta > 0.05:
+            scen_dir = f"+{scen_delta:.2f} m (Deeper)"
+            scen_color = "var(--badge-deep-text)"
+        elif scen_delta < -0.05:
+            scen_dir = f"{scen_delta:.2f} m (Shallower)"
+            scen_color = "var(--badge-shallow-text)"
+        else:
+            scen_dir = "0.00 m (No Change)"
+            scen_color = "var(--text-secondary)"
+
+        rain_label = f"{rain_factor:+d}%" if rain_factor != 0 else "0% (Baseline)"
+        sim_html = f"""
+        <div class="scenario-comparison-grid">
+            <div class="scenario-card">
+                <div class="scenario-card-eyebrow">Baseline Prediction (0% Adjustment)</div>
+                <div class="scenario-card-val">{pred_val:.2f} <span style="font-size: 0.9rem; font-weight: 500;">m MBGL</span></div>
+                <div class="scenario-card-sub">Standard antecedent rainfall features as observed</div>
+            </div>
+            <div class="scenario-card">
+                <div class="scenario-card-eyebrow">Simulated Scenario ({rain_label})</div>
+                <div class="scenario-card-val" style="color: var(--teal-accent);">{scen_val:.2f} <span style="font-size: 0.9rem; font-weight: 500;">m MBGL</span></div>
+                <div class="scenario-card-sub">Depth under {rain_label} cumulative rainfall scaling</div>
+            </div>
+            <div class="scenario-card">
+                <div class="scenario-card-eyebrow">Net Scenario Impact vs Baseline</div>
+                <div class="scenario-card-val" style="color: {scen_color};">{scen_dir}</div>
+                <div class="scenario-card-sub">Model sensitivity delta for {station_sel}</div>
+            </div>
+        </div>
+        """
+        st.markdown(sim_html, unsafe_allow_html=True)
+        st.caption("ℹ️ *Applies proportional scaling to antecedent 30d–365d cumulative rainfall features as a hypothetical sensitivity experiment, not a weather forecast or guarantee of physical aquifer recharge.*")
+
+        # 7. Forecast Horizon Context
+        st.markdown("---")
         st.subheader("Forecast Horizon Context (Next-Observation Schedule)")
         render_horizon_callout(test_h, overall_h)
+        st.caption(
+            "ℹ️ *Horizon Interpretation: The displayed approximate next-observation event date is illustrative, "
+            "calculated using the overall held-out test-set median observation interval of 92 days. It is NOT a station-specific "
+            "survey schedule or a date predicted by the model.*"
+        )
 
-        # 7. Model Evaluation Results
+        # 8. Model Performance (Held-Out Test Set 2018–2023, n=124)
+        st.markdown("---")
         st.subheader("Held-Out Test Evaluation Results (2018–2023, n=124 events)")
         render_evaluation_result_cards(
             rf_mae=model_metrics['rf_mae'],
@@ -179,17 +316,22 @@ def render_forecast_screen(df: pd.DataFrame, models: dict) -> None:
             pers_mae=model_metrics['pers_mae'],
             pers_rmse=model_metrics['pers_rmse'],
             emp_cov=emp_cov,
-            avg_width=avg_width
+            avg_width=avg_width,
+            pers_r2=model_metrics.get('pers_r2', -0.233)
         )
+        st.markdown(
+            """
+            <div class="perf-synthesis-box">
+                <b>Performance Synthesis & Practical Scope:</b> The temporal Random Forest model outperforms the persistence baseline (<tt>gw_now</tt>) on the held-out test split (2018–2023, <i>n</i>=124), achieving a <b>23.8% reduction in MAE</b> (2.092 m vs 2.744 m) and a <b>21.8% reduction in RMSE</b> (2.899 m vs 3.709 m). However, an <i>R</i>² of <b>0.247</b> and an MAE of <b>~2.09 m</b> indicate that predictive performance remains limited, reflecting the hydrogeological complexity of Deccan basalt aquifers and irregular sounding intervals. These metrics apply strictly to the temporal next-observation forecast and should not be conflated with the spatial mapping model (LOSO-CV <i>R</i>² = 0.022) or separate exploratory notebook experiments.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # 9. Scientific & Methodological Notes (Collapsible)
+        st.markdown("---")
+        render_forecast_methodology_expander()
+        render_cqr_calibration_expander()
 
     else:
         st.warning("Forecasting models and evaluation metadata are loading or unavailable.")
-
-    # 8. Historical Groundwater Chart (Full-Width)
-    st.markdown("---")
-    st.subheader(f"Historical Water Table Fluctuations: {station_sel}")
-    render_station_history_chart(station_df, station_sel, theme=active_theme)
-    st.caption("ℹ️ *Note: Depth bands (< 4.0 m, 4.0–8.0 m, > 8.0 m) represent project-defined physical reference bands, not official administrative exploitation categories. Observed water table changes reflect net dynamic balance (precipitation infiltration, baseflow, and seasonal agricultural pumping extraction) rather than direct measurements of natural recharge alone.*")
-
-    # 9. Prediction Interval Calibration & Conformal Prediction Analysis
-    render_cqr_calibration_expander()

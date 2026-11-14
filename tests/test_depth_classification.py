@@ -35,7 +35,7 @@ def test_depth_below_4m():
         plan = get_intervention_plan(d)
         assert plan["category"] == "Shallow"
         assert plan["icon"] == "🟢"
-        assert plan["priority"] == "Equilibrium Maintenance & Monitoring Advisory"
+        assert plan["priority"] == "Shallow Reference Tier — Monitoring Advisory"
         assert len(plan["actions"]) > 0
 
 
@@ -51,7 +51,7 @@ def test_depth_exactly_4m():
     plan = get_intervention_plan(d)
     assert plan["category"] == "Moderate"
     assert plan["icon"] == "🟡"
-    assert plan["priority"] == "Precautionary Stewardship & Recharge Advisory"
+    assert plan["priority"] == "Moderate Reference Tier — Conservation Advisory"
     assert len(plan["actions"]) > 0
 
 
@@ -68,7 +68,7 @@ def test_depth_between_4m_and_8m():
         plan = get_intervention_plan(d)
         assert plan["category"] == "Moderate"
         assert plan["icon"] == "🟡"
-        assert plan["priority"] == "Precautionary Stewardship & Recharge Advisory"
+        assert plan["priority"] == "Moderate Reference Tier — Conservation Advisory"
         assert len(plan["actions"]) > 0
 
 
@@ -84,7 +84,7 @@ def test_depth_exactly_8m():
     plan = get_intervention_plan(d)
     assert plan["category"] == "Moderate"
     assert plan["icon"] == "🟡"
-    assert plan["priority"] == "Precautionary Stewardship & Recharge Advisory"
+    assert plan["priority"] == "Moderate Reference Tier — Conservation Advisory"
     assert len(plan["actions"]) > 0
 
 
@@ -101,7 +101,7 @@ def test_depth_above_8m():
         plan = get_intervention_plan(d)
         assert plan["category"] == "Deep"
         assert plan["icon"] == "🔴"
-        assert plan["priority"] == "High-Vulnerability Monitoring & Conservation Advisory"
+        assert plan["priority"] == "Deep Reference Tier — Enhanced Assessment Advisory"
         assert len(plan["actions"]) > 0
 
 
@@ -136,22 +136,22 @@ def test_advisory_branch_selection():
     shallow_plan = get_intervention_plan(2.5)
     assert shallow_plan["category"] == "Shallow"
     assert shallow_plan["icon"] == "🟢"
-    assert "Equilibrium" in shallow_plan["priority"]
+    assert shallow_plan["priority"] == "Shallow Reference Tier — Monitoring Advisory"
     assert any("Participatory Community Water Budgeting" in title for title, _ in shallow_plan["actions"])
     
     # Moderate branch
     mod_plan = get_intervention_plan(5.5)
     assert mod_plan["category"] == "Moderate"
     assert mod_plan["icon"] == "🟡"
-    assert "Precautionary" in mod_plan["priority"]
+    assert mod_plan["priority"] == "Moderate Reference Tier — Conservation Advisory"
     assert any("Contour Bunding" in title for title, _ in mod_plan["actions"])
     
     # Deep branch
     deep_plan = get_intervention_plan(9.0)
     assert deep_plan["category"] == "Deep"
     assert deep_plan["icon"] == "🔴"
-    assert "High-Vulnerability" in deep_plan["priority"]
-    assert any("Artificial Recharge Exploration" in title for title, _ in deep_plan["actions"])
+    assert deep_plan["priority"] == "Deep Reference Tier — Enhanced Assessment Advisory"
+    assert any("Artificial Recharge Feasibility Assessment" in title for title, _ in deep_plan["actions"])
     
     # Unknown branch
     unknown_plan = get_intervention_plan(None)

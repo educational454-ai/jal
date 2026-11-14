@@ -656,6 +656,17 @@ section[data-testid="stSidebar"] div[data-testid="stRadio"] label:has(input:chec
     white-space: nowrap;
 }
 
+/* Filter & Selectbox Labels - High Contrast Protection */
+div[data-testid="stSelectbox"] label,
+div[data-testid="stSelectbox"] label p,
+div[data-testid="stSelectbox"] label span,
+div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"],
+div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"] p,
+div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"] span {
+    color: var(--text-primary) !important;
+    font-weight: 550 !important;
+}
+
 /* Theme-Aware Filter Dropdown (Screen 2 GIS Controls & Dashboard Selectboxes) */
 div[data-testid="stSelectbox"] div[data-rac][role="group"],
 div[data-testid="stSelectbox"] .react-aria-ComboBox div[role="group"],
@@ -932,6 +943,124 @@ div[data-testid="stSlider"] [data-testid="stTickBarMin"],
 div[data-testid="stSlider"] [data-testid="stTickBarMax"] {
     color: var(--text-muted) !important;
     font-size: 0.76rem !important;
+}
+
+/* Scenario Comparison Cards */
+.scenario-comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 12px 0 16px 0;
+}
+
+@media (max-width: 768px) {
+    .scenario-comparison-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.scenario-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    padding: 14px 18px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.scenario-card-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.scenario-card-val {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.15;
+    margin-bottom: 3px;
+}
+
+.scenario-card-sub {
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    line-height: 1.35;
+}
+
+/* Uncertainty Breakdown Card */
+.uncertainty-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--amber-accent, #F59E0B);
+    border-radius: 9px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    box-shadow: var(--card-shadow);
+}
+
+.uncertainty-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.uncertainty-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 900px) {
+    .uncertainty-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.uncertainty-item-lbl {
+    font-size: 0.70rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+
+.uncertainty-item-val {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 2px;
+}
+
+.uncertainty-item-sub {
+    font-size: 0.70rem;
+    color: var(--text-secondary);
+    margin-top: 1px;
+}
+
+/* Model Performance Synthesis Box */
+.perf-synthesis-box {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--teal-accent);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    line-height: 1.5;
 }
 
 /* -------------------------------------------------------------

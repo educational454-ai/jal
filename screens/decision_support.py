@@ -53,10 +53,10 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
         st.markdown(
             f'<div class="kpi-card kpi-card-deep">'
             f'<div class="kpi-top">'
-            f'<div class="kpi-label">Deep Tier Stations (&gt; 8.0 m)</div>'
+            f'<div class="kpi-label">Deep Reference Tier (&gt; 8.0 m)</div>'
             f'<div class="kpi-value" style="color: var(--badge-deep-text);">{deep_count} Stations</div>'
             f'</div>'
-            f'<div class="kpi-caption">High vulnerability; prioritize recharge feasibility & pumping review.</div>'
+            f'<div class="kpi-caption">Project physical tier (&gt; 8.0 m MBGL); site feasibility &amp; extraction review.</div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -64,10 +64,10 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
         st.markdown(
             f'<div class="kpi-card kpi-card-moderate">'
             f'<div class="kpi-top">'
-            f'<div class="kpi-label">Moderate Tier Stations (4.0–8.0 m)</div>'
+            f'<div class="kpi-label">Moderate Reference Tier (4.0–8.0 m)</div>'
             f'<div class="kpi-value" style="color: var(--badge-moderate-text);">{moderate_count} Stations</div>'
             f'</div>'
-            f'<div class="kpi-caption">Precautionary stewardship; contour bunding & micro-irrigation.</div>'
+            f'<div class="kpi-caption">Project physical tier (4.0–8.0 m MBGL); soil moisture conservation &amp; micro-irrigation.</div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -75,10 +75,10 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
         st.markdown(
             f'<div class="kpi-card kpi-card-shallow">'
             f'<div class="kpi-top">'
-            f'<div class="kpi-label">Shallow Tier Stations (&lt; 4.0 m)</div>'
+            f'<div class="kpi-label">Shallow Reference Tier (&lt; 4.0 m)</div>'
             f'<div class="kpi-value" style="color: var(--badge-shallow-text);">{shallow_count} Stations</div>'
             f'</div>'
-            f'<div class="kpi-caption">Safe equilibrium; regular vigilance & participatory budgeting.</div>'
+            f'<div class="kpi-caption">Project physical tier (&lt; 4.0 m MBGL); monitoring advisory &amp; participatory planning.</div>'
             f'</div>',
             unsafe_allow_html=True
         )
@@ -92,7 +92,10 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
     st.markdown("### Station Assessment & Conservation Planning")
     st.markdown(
         '<div class="station-assessment-note">'
-        'ℹ️ <i>Station assessments are based on each station\'s latest available historical observation, not live measurements.</i>'
+        'ℹ️ <b>Physical Depth Categories & Historical Baseline Note:</b> Depth tiers (&lt; 4.0 m, 4.0–8.0 m, &gt; 8.0 m MBGL) '
+        'are project-defined physical reference categories based on each station\'s latest available historical observation, '
+        '<b>not current groundwater conditions</b>. They do not constitute official Central Ground Water Board (CGWB) vulnerability, '
+        'critical status, or groundwater safety classifications.'
         '</div>',
         unsafe_allow_html=True
     )
@@ -112,7 +115,7 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
             if unknown_count > 0:
                 tier_options.append("Unknown / Unclassified")
             tier_filter = st.selectbox(
-                "Filter by Vulnerability Tier",
+                "Filter by Depth Tier",
                 tier_options,
                 index=0,
                 key="ds_tier_filter",
@@ -121,10 +124,10 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
         with f3:
             sort_option = st.selectbox(
                 "Sort Stations",
-                ["Vulnerability (Deepest First)", "Water Table (Shallowest First)", "Alphabetical (A–Z)"],
+                ["Deepest Observation First", "Shallowest Observation First", "Alphabetical (A–Z)"],
                 index=0,
                 key="ds_sort_option",
-                help="Order stations to prioritize critical locations or organize alphabetically."
+                help="Order stations to prioritize deep water tables or organize alphabetically."
             )
 
     # Filter logic
@@ -145,9 +148,9 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
         filtered_df = filtered_df[filtered_df['station'].str.contains(query, case=False, na=False)]
 
     # Sorting logic
-    if "Deepest First" in sort_option:
+    if "Deepest" in sort_option:
         filtered_df = filtered_df.sort_values(by="gw_level_mbgl", ascending=False, na_position="last")
-    elif "Shallowest First" in sort_option:
+    elif "Shallowest" in sort_option:
         filtered_df = filtered_df.sort_values(by="gw_level_mbgl", ascending=True, na_position="last")
     elif "Alphabetical" in sort_option:
         filtered_df = filtered_df.sort_values(by="station", ascending=True)
@@ -175,11 +178,16 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
             category = plan['category']
             badge_class = plan['badge']
 
-            obs_date = st_row['date'].strftime('%d %b %Y') if pd.notna(st_row.get('date')) else 'N/A'
+            obs_dt = st_row['date'] if pd.notna(st_row.get('date')) else None
+            obs_year = obs_dt.year if obs_dt else None
+            obs_date = obs_dt.strftime('%d %b %Y') if obs_dt else 'N/A'
             season_tag = st_row.get('season_tag', 'N/A')
             rain_90 = f"{st_row['rain_90d']:.1f} mm" if pd.notna(st_row.get('rain_90d')) else "N/A"
             rain_365 = f"{st_row['rain_365d']:.1f} mm" if pd.notna(st_row.get('rain_365d')) else "N/A"
             is_extrapolated = bool(st_row.get('is_rainfall_extrapolated', 0))
+
+            is_older = (obs_year is not None and obs_year < 2023)
+            recency_badge_html = f'<span class="station-historical-badge" style="background-color: rgba(245, 158, 11, 0.15); border: 1px solid var(--badge-moderate-border); color: var(--badge-moderate-text); padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;">🗓️ Historical Survey: {obs_year}</span>' if is_older else ""
 
             if pd.notna(depth) and isinstance(depth, (int, float)):
                 depth_val_str = f"{depth:.2f}"
@@ -198,6 +206,7 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
                 f'<div class="station-identity">'
                 f'<span class="station-name">{st_name}</span>'
                 f'<span class="{badge_class}">{tier_label}</span>'
+                f'{recency_badge_html}'
                 f'{extrap_badge_html}'
                 f'</div>'
                 f'<div class="station-depth-hero hero-{category.lower()}">'
@@ -206,7 +215,7 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
                 f'</div>'
                 f'</div>'
                 f'<div class="station-telemetry-grid">'
-                f'<div class="telemetry-item"><span class="telemetry-lbl">Observation Date</span><span class="telemetry-val">{obs_date}</span></div>'
+                f'<div class="telemetry-item"><span class="telemetry-lbl">Latest Recorded Survey</span><span class="telemetry-val">{obs_date}</span></div>'
                 f'<div class="telemetry-item"><span class="telemetry-lbl">Season</span><span class="telemetry-val">{season_tag}</span></div>'
                 f'<div class="telemetry-item"><span class="telemetry-lbl">Past 90-Day Rain</span><span class="telemetry-val">{rain_90}</span></div>'
                 f'<div class="telemetry-item"><span class="telemetry-lbl">Past 365-Day Rain</span><span class="telemetry-val">{rain_365}</span></div>'
@@ -217,13 +226,13 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
             st.markdown(card_html, unsafe_allow_html=True)
 
             # Section E: Conservation Recommendations Expander Interaction
-            with st.expander(f"📋 View Conservation Recommendations — {st_name} ({priority})", expanded=is_single):
+            with st.expander(f"📋 View Advisory — {st_name} ({priority})", expanded=is_single):
                 banner_html = (
                     f'<div class="decision-priority-banner priority-{category.lower()}">'
                     f'<span class="priority-banner-icon">{icon}</span>'
                     f'<div class="priority-banner-text">'
                     f'<div class="priority-banner-title">{priority}</div>'
-                    f'<div class="priority-banner-sub">{plan["priority_level"]}</div>'
+                    f'<div class="priority-banner-sub">Assessment based on latest available historical observation ({obs_date}), not current groundwater conditions.</div>'
                     f'</div>'
                     f'</div>'
                 )
@@ -241,6 +250,11 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
                 ])
                 actions_html = f'<div class="decision-actions-list">{actions_rows}</div>'
                 st.markdown(actions_html, unsafe_allow_html=True)
+                st.caption(
+                    f"ℹ️ *Advisory Note for {st_name}: Assessment is based on the latest available historical observation ({obs_date}) "
+                    f"and project-defined physical depth tiers (< 4.0 m, 4.0–8.0 m, > 8.0 m MBGL). It does not represent current real-time "
+                    f"groundwater conditions or an official CGWB vulnerability classification.*"
+                )
 
     # -------------------------------------------------------------
     # Section F: Scientific Limitations & Methodological Boundaries
@@ -248,8 +262,8 @@ def render_decision_support_screen(df: pd.DataFrame) -> None:
     st.markdown("---")
     with st.expander("⚖️ **Scientific Assumptions, Methodological Boundaries & Limitations**", expanded=False):
         st.markdown("""
-        1. **Physical Reference Tiers vs. Official Administrative Classifications**: Depth tiers (`< 4.0 m`, `4.0–8.0 m`, `> 8.0 m MBGL`) represent project-defined physical reference bands for instantaneous telemetry visualization. They do not constitute official Central Ground Water Board (CGWB) or Groundwater Estimation Committee (GEC) administrative classifications (*Safe, Semi-Critical, Critical, Over-Exploited*), which evaluate annual recharge vs. annual extraction budgets at the entire taluka level.
-        2. **Groundwater Depth & Depletion Dynamics**: Water table depth alone does not prove aquifer depletion, identify localized root causes (e.g. localized pumping vs. seasonal recharge deficits), or prove the necessity of a specific engineering intervention at a site.
+        1. **Physical Reference Tiers vs. Official Administrative Classifications**: Depth tiers (`< 4.0 m`, `4.0–8.0 m`, `> 8.0 m MBGL`) represent project-defined physical reference categories based on discrete survey soundings. They do not constitute official Central Ground Water Board (CGWB) or Groundwater Estimation Committee (GEC) administrative classifications (*Safe, Semi-Critical, Critical, Over-Exploited*), which evaluate annual recharge vs. annual extraction budgets at the entire taluka level.
+        2. **Historical Soundings vs. Current Groundwater Conditions**: All station assessments are derived strictly from their latest recorded historical observations (ranging from 1997 to 2023), not current real-time water table conditions. Water table depth alone does not prove aquifer depletion, identify localized root causes (e.g. localized pumping vs. seasonal recharge deficits), or establish the necessity of a specific engineering intervention at a site.
         3. **Site-Specific Feasibility Surveys**: Interventions presented are rule-based hydrogeological heuristics synthesized from standard CGWB and GSDA watershed conservation guidelines. All structural interventions (check dams, percolation tanks, injection wells) require on-site geophysical, lithological, and civil engineering surveys prior to execution.
         4. **Precipitation Grid Extrapolation**: Four peripheral monitoring stations (*Pimpri (Kh) Malvasti, Kamatwadi-Walha, Walha, Narayanpur*) lie outside the 4-point 0.25° IMD precipitation grid; antecedent rainfall metrics at these locations are spatially extrapolated.
         """)

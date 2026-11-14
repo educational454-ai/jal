@@ -283,6 +283,17 @@ def apply_theme(theme: str = None) -> None:
             height: 100% !important;
         }}
 
+        /* Filter & Selectbox Labels - High Contrast Protection */
+        div[data-testid="stSelectbox"] label,
+        div[data-testid="stSelectbox"] label p,
+        div[data-testid="stSelectbox"] label span,
+        div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"],
+        div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"] p,
+        div[data-testid="stSelectbox"] [data-testid="stWidgetLabel"] span {{
+            color: {palette['text_primary']} !important;
+            font-weight: 550 !important;
+        }}
+
         /* Dropdowns & Select Components (Theme-aware borders, no red outlines, accessible focus) */
         div[data-testid="stSelectbox"] div[data-rac][role="group"],
         div[data-testid="stSelectbox"] .react-aria-ComboBox div[role="group"],

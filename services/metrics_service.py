@@ -13,6 +13,7 @@ def get_model_metrics(metadata: dict) -> dict:
         "rf_r2": rf.get('R2', 0.247),
         "pers_mae": pers.get('MAE', 2.744),
         "pers_rmse": pers.get('RMSE', 3.709),
+        "pers_r2": pers.get('R2', -0.233),
     }
 
 
