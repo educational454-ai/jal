@@ -305,7 +305,7 @@ BhujalDrishti/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/SuchitraKarde/BhujalDrishti.git
+git clone https://github.com/educational454-ai/jal
 cd BhujalDrishti
 ```
 
