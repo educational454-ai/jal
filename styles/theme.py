@@ -36,36 +36,36 @@ THEME_PALETTES = {
         "chart_grid": "#23414B",
     },
     "light": {
-        "bg_primary": "#F4F8F8",
-        "bg_secondary": "#EBF2F3",
+        "bg_primary": "#F5F7F4",
+        "bg_secondary": "#EAEFEA",
         "bg_surface": "#FFFFFF",
-        "bg_surface_hover": "#F8FAFA",
-        "border": "#D9E5E7",
-        "text_primary": "#17313B",
-        "text_secondary": "#617780",
-        "text_muted": "#82969E",
-        "teal_accent": "#087F80",
-        "blue_accent": "#247DA8",
-        "callout_bg": "#F8FAFC",
-        "callout_border": "#CBD5E1",
-        "callout_text": "#1E293B",
-        "callout_text_secondary": "#475569",
-        "alert_info_bg": "#EFF6FF",
-        "alert_info_border": "#BFDBFE",
-        "alert_info_text": "#1E40AF",
-        "alert_warning_bg": "#FEFCE8",
-        "alert_warning_border": "#FDE047",
-        "alert_warning_text": "#854D0E",
+        "bg_surface_hover": "#F0F5F2",
+        "border": "#DCE6E2",
+        "text_primary": "#24343A",
+        "text_secondary": "#647579",
+        "text_muted": "#88989C",
+        "teal_accent": "#168C83",
+        "blue_accent": "#123B46",
+        "callout_bg": "#D8EEE8",
+        "callout_border": "#B6DCD3",
+        "callout_text": "#24343A",
+        "callout_text_secondary": "#647579",
+        "alert_info_bg": "#D8EEE8",
+        "alert_info_border": "#B6DCD3",
+        "alert_info_text": "#123B46",
+        "alert_warning_bg": "#FDF6ED",
+        "alert_warning_border": "#F5D6A8",
+        "alert_warning_text": "#8C5B17",
         "alert_error_bg": "#FEF2F2",
         "alert_error_border": "#FECACA",
         "alert_error_text": "#991B1B",
-        "alert_success_bg": "#F0FDFA",
-        "alert_success_border": "#99F6E4",
-        "alert_success_text": "#087F80",
-        "sidebar_bg": "#F8FAFC",
-        "sidebar_border": "#E2E8F0",
-        "chart_bg": "#FAFAFA",
-        "chart_grid": "#E2E8F0",
+        "alert_success_bg": "#D8EEE8",
+        "alert_success_border": "#B6DCD3",
+        "alert_success_text": "#168C83",
+        "sidebar_bg": "#FFFFFF",
+        "sidebar_border": "#DCE6E2",
+        "chart_bg": "#FFFFFF",
+        "chart_grid": "#E2EBE7",
     }
 }
 
@@ -460,6 +460,89 @@ def apply_theme(theme: str = None) -> None:
         }}
         details[data-testid="stExpander"] summary svg {{
             fill: {palette['text_secondary']} !important;
+        }}
+
+        /* Buttons - Primary and Secondary Hydro-Tech Styling */
+        button[kind="primary"],
+        .stButton > button[kind="primary"],
+        button[data-testid="baseButton-primary"] {{
+            background-color: {palette['blue_accent']} !important;
+            color: #FFFFFF !important;
+            border: 1px solid {palette['blue_accent']} !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            padding: 0.5rem 1.1rem !important;
+            transition: all 0.15s ease !important;
+            box-shadow: 0 1px 2px rgba(18, 59, 70, 0.08) !important;
+        }}
+        button[kind="primary"]:hover,
+        .stButton > button[kind="primary"]:hover,
+        button[data-testid="baseButton-primary"]:hover {{
+            background-color: {palette['teal_accent']} !important;
+            border-color: {palette['teal_accent']} !important;
+            color: #FFFFFF !important;
+        }}
+        button[kind="secondary"],
+        .stButton > button[kind="secondary"],
+        .stButton > button:not([kind="primary"]) {{
+            background-color: {palette['bg_surface']} !important;
+            color: {palette['text_primary']} !important;
+            border: 1px solid {palette['border']} !important;
+            border-radius: 8px !important;
+            font-weight: 550 !important;
+            transition: all 0.15s ease !important;
+        }}
+        button[kind="secondary"]:hover,
+        .stButton > button[kind="secondary"]:hover,
+        .stButton > button:not([kind="primary"]):hover {{
+            border-color: {palette['teal_accent']} !important;
+            color: {palette['teal_accent']} !important;
+            background-color: {palette['bg_surface_hover']} !important;
+        }}
+
+        /* Tabs Styling - Aqua Teal Highlight */
+        div[data-testid="stTabs"] button[role="tab"] {{
+            color: {palette['text_secondary']} !important;
+            font-weight: 550 !important;
+            font-size: 0.90rem !important;
+            border-bottom: 2px solid transparent !important;
+            padding: 8px 16px !important;
+            background-color: transparent !important;
+            transition: all 0.15s ease !important;
+        }}
+        div[data-testid="stTabs"] button[role="tab"]:hover {{
+            color: {palette['blue_accent']} !important;
+        }}
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+            color: {palette['teal_accent']} !important;
+            border-bottom: 2px solid {palette['teal_accent']} !important;
+            font-weight: 650 !important;
+        }}
+        div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {{
+            background-color: {palette['teal_accent']} !important;
+        }}
+        div[data-testid="stTabs"] div[data-baseweb="tab-border"] {{
+            background-color: {palette['border']} !important;
+        }}
+
+        /* DataFrames & Tables */
+        div[data-testid="stDataFrame"],
+        div[data-testid="stTable"] {{
+            border: 1px solid {palette['border']} !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            background-color: {palette['bg_surface']} !important;
+        }}
+
+        /* Prominent Titles in Deep Teal */
+        .main-header,
+        .welcome-title,
+        .overview-welcome-title,
+        .map-welcome-title,
+        .forecast-welcome-title,
+        .ds-welcome-title,
+        h1, h2, h3 {{
+            color: {palette['blue_accent']} !important;
         }}
     </style>
     """

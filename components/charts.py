@@ -84,7 +84,7 @@ def render_regional_groundwater_chart(
         )
 
     # Reference Depth Thresholds (Project-defined physical reference bands)
-    ax.axhline(4.0, color='#059669', linestyle='--', linewidth=1.1, label='Shallow Band (< 4.0 m)')
+    ax.axhline(4.0, color='#168C83', linestyle='--', linewidth=1.1, label='Shallow Band (< 4.0 m)')
     ax.axhline(8.0, color='#DC2626', linestyle='--', linewidth=1.1, label='Deep Band (> 8.0 m)')
 
     ax.set_ylabel("Groundwater Depth (m MBGL)\n[Shallower ↑ / Deeper ↓]", color=palette['text_primary'], fontsize=8.8, labelpad=8)
@@ -317,7 +317,7 @@ def render_station_history_chart(
         if pred_date is None:
             pred_date = last_date + pd.Timedelta(days=92)
             
-        color_pred = '#D97706' if theme == 'light' else '#F59E0B'
+        color_pred = '#D99A45' if theme == 'light' else '#F59E0B'
         
         # A. Dashed trajectory connector from latest observation to next prediction
         ax.plot(
@@ -339,7 +339,7 @@ def render_station_history_chart(
                 [pred_val], 
                 yerr=[[yerr_lower], [yerr_upper]], 
                 fmt='none', 
-                ecolor='#B45309' if theme == 'light' else '#FBBF24', 
+                ecolor='#B87A28' if theme == 'light' else '#FBBF24', 
                 elinewidth=2.2, 
                 capsize=5, 
                 capthick=1.8, 
@@ -392,7 +392,7 @@ def render_station_history_chart(
         
         # E. Simulated Scenario Marker (if rainfall factor != 0 and scenario provided)
         if scenario_val is not None and rain_factor != 0:
-            color_scen = '#0D9488' if theme == 'light' else '#2DD4BF'
+            color_scen = '#168C83' if theme == 'light' else '#2DD4BF'
             ax.plot(
                 [last_date, pred_date], 
                 [last_val, scenario_val], 
@@ -415,7 +415,7 @@ def render_station_history_chart(
             )
     
     # 3. Project-Defined Physical Depth Reference Lines
-    ax.axhline(4.0, color='#10B981', linestyle=':', linewidth=1.2, label='Shallow Reference (< 4.0 m)')
+    ax.axhline(4.0, color='#168C83', linestyle=':', linewidth=1.2, label='Shallow Reference (< 4.0 m)')
     ax.axhline(8.0, color='#EF4444', linestyle=':', linewidth=1.2, label='Deep Reference (> 8.0 m)')
     
     # 4. MBGL Axis Orientation: Inverted (0 at surface, deeper at bottom)
@@ -454,7 +454,7 @@ def render_seasonal_comparison_chart(yearly_summary: pd.DataFrame, theme: str = 
     for spine in ax.spines.values():
         spine.set_color(palette['border'])
         
-    color_may = '#E67E22' if theme == 'dark' else '#D97706'
+    color_may = '#E67E22' if theme == 'dark' else '#D99A45'
     color_nov = palette['teal_accent']
     color_fill = palette['blue_accent']
     
@@ -491,7 +491,7 @@ def render_seasonal_comparison_chart(yearly_summary: pd.DataFrame, theme: str = 
     )
     
     # Project-defined reference depth bands
-    ax.axhline(4.0, color='#10B981', linestyle='--', linewidth=1.1, alpha=0.75, label='Shallow Band (< 4.0 m)')
+    ax.axhline(4.0, color='#168C83', linestyle='--', linewidth=1.1, alpha=0.75, label='Shallow Band (< 4.0 m)')
     ax.axhline(8.0, color='#EF4444', linestyle='--', linewidth=1.1, alpha=0.75, label='Deep Band (> 8.0 m)')
     
     ax.set_ylabel("Groundwater Depth (m MBGL)\n[Shallower ↑ / Deeper ↓]", color=palette['text_primary'], fontsize=8.8, labelpad=8)

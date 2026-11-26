@@ -102,24 +102,25 @@ def render_groundwater_map(
         })
         
     is_dark = (theme == "dark")
-    map_border = "#23414B" if is_dark else "#D9E5E7"
-    map_bg = "#0B2029" if is_dark else "#F4F8F8"
+    map_border = "#23414B" if is_dark else "#DCE6E2"
+    map_bg = "#0B2029" if is_dark else "#F5F7F4"
     
     popup_bg = "#102A35" if is_dark else "#FFFFFF"
-    popup_text = "#EAF6F7" if is_dark else "#17313B"
-    popup_muted = "#A5BEC5" if is_dark else "#617780"
-    popup_border = "#23414B" if is_dark else "#E2E8F0"
-    popup_close = "#A5BEC5" if is_dark else "#64748B"
+    popup_text = "#EAF6F7" if is_dark else "#24343A"
+    popup_muted = "#A5BEC5" if is_dark else "#647579"
+    popup_border = "#23414B" if is_dark else "#DCE6E2"
+    popup_close = "#A5BEC5" if is_dark else "#647579"
     
-    alert_warn_bg = "rgba(245, 158, 11, 0.16)" if is_dark else "#FEF3C7"
-    alert_warn_border = "#F59E0B"
-    alert_warn_text = "#FDE68A" if is_dark else "#92400E"
+    alert_warn_bg = "rgba(245, 158, 11, 0.16)" if is_dark else "#FDF6ED"
+    alert_warn_border = "#F59E0B" if is_dark else "#D99A45"
+    alert_warn_text = "#FDE68A" if is_dark else "#8C5B17"
     
-    alert_succ_bg = "rgba(16, 185, 129, 0.16)" if is_dark else "#D1FAE5"
-    alert_succ_border = "#10B981"
-    alert_succ_text = "#A7F3D0" if is_dark else "#065F46"
+    alert_succ_bg = "rgba(16, 185, 129, 0.16)" if is_dark else "#D8EEE8"
+    alert_succ_border = "#10B981" if is_dark else "#168C83"
+    alert_succ_text = "#A7F3D0" if is_dark else "#168C83"
 
     marker_stroke = "#0B2029" if is_dark else "#FFFFFF"
+    selected_stroke = "#35D0C1" if is_dark else "#123B46"
     
     dark_tile_filter = """
         .leaflet-tile-pane {
@@ -229,8 +230,8 @@ def render_groundwater_map(
             .popup-interpretation {{
                 margin-top: 7px;
                 padding: 6px 8px;
-                background: {"rgba(53, 208, 193, 0.08)" if is_dark else "rgba(15, 118, 110, 0.06)"};
-                border-left: 3px solid {"#35D0C1" if is_dark else "#0F766E"};
+                background: {"rgba(53, 208, 193, 0.08)" if is_dark else "rgba(22, 140, 131, 0.08)"};
+                border-left: 3px solid {"#35D0C1" if is_dark else "#168C83"};
                 border-radius: 4px;
                 font-size: 11px;
                 color: {popup_text};
@@ -293,7 +294,7 @@ def render_groundwater_map(
                 border-bottom: none !important;
             }}
             .leaflet-control-custom a:hover {{
-                background-color: {"#163745" if is_dark else "#F1F5F9"} !important;
+                background-color: {"#163745" if is_dark else "#F0F5F2"} !important;
             }}
         </style>
     </head>
@@ -316,7 +317,7 @@ def render_groundwater_map(
             stations.forEach(function(st) {{
                 var radiusSize = st.is_selected ? 11.0 : 8.5;
                 var markerWeight = st.is_selected ? 3.0 : 2.2;
-                var strokeColor = st.is_selected ? '#35D0C1' : '{marker_stroke}';
+                var strokeColor = st.is_selected ? '{selected_stroke}' : '{marker_stroke}';
 
                 var marker = L.circleMarker([st.lat, st.lon], {{
                     radius: radiusSize,

@@ -19,26 +19,32 @@ def render_kpi_card(label: str, value: str, caption: str) -> None:
     )
 
 
-def render_overview_kpis(avg_mbgl: float, station_count: int, total_records: int, rf_mae: float = None) -> None:
-    """Render the primary 3-column overview KPI grid."""
+def render_overview_kpis(
+    station_count: int = 11,
+    total_records: int = 680,
+    coverage_km2: str = "~2,936 km²",
+    avg_mbgl: float = None,
+    rf_mae: float = None
+) -> None:
+    """Render the primary 3-column overview project snapshot KPI grid."""
     k1, k2, k3 = st.columns(3)
     with k1:
         render_kpi_card(
-            label="Mean Water Table Depth",
-            value=f"{avg_mbgl:.2f} m",
-            caption=f"Meters Below Ground Level (MBGL) across {station_count} reporting stations."
+            label="Observation Stations",
+            value=f"{station_count} Stations",
+            caption=f"CGWB monitoring network in Purandar (1996–2023; 9 eligible for forecasting with ≥10 obs)."
         )
     with k2:
         render_kpi_card(
-            label="Monitoring Wells",
-            value=f"{station_count} Wells",
-            caption="In-situ manual CGWB monitoring network across Purandar Taluka."
+            label="Historical Observations",
+            value=f"{total_records} Soundings",
+            caption="Quality-verified manual tape depth soundings (1996–2023; discrete historical surveys)."
         )
     with k3:
         render_kpi_card(
-            label="Historical Observations",
-            value=f"{total_records} Records",
-            caption="Quality-verified discrete observations spanning 1996 through 2023."
+            label="Study Area Coverage",
+            value=f"{coverage_km2}",
+            caption="Purandar Taluka, Maharashtra (~1 monitoring station per 267 km²; coarse network)."
         )
 
 
