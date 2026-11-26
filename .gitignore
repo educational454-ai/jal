@@ -8,8 +8,10 @@ venv/
 env/
 .venv/
 
-# Streamlit
-.streamlit/
+# Streamlit secrets (never commit actual secrets or credentials)
+.streamlit/secrets.toml
+.streamlit/secrets*.toml
+!.streamlit/secrets.toml.example
 
 # OS / IDE
 .vscode/

@@ -68,4 +68,4 @@ elif "Forecast" in selected_screen:
     render_forecast_screen(df, models)
 
 elif "Decision" in selected_screen:
-    render_decision_support_screen(df)
+    render_decision_support_screen(df, models)
