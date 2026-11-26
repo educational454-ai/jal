@@ -287,7 +287,7 @@ def get_intervention_plan(mbgl: float | None) -> dict:
             "priority": "Deep Reference Tier — Enhanced Assessment Advisory",
             "priority_level": "Deep Reference Tier (> 8.0 m MBGL)",
             "actions": [
-                ("Artificial Recharge Feasibility Assessment", "Evaluate check dams and percolation structures as preliminary recharge options, strictly requiring site-specific geological, hydrogeological, and infiltration feasibility assessment in fractured basalt zones."),
+                ("Artificial Recharge Feasibility Assessment", "Evaluate check dams and percolation structures as preliminary recharge options, strictly requiring site-specific geological, hydrogeological, and infiltration feasibility assessment."),
                 ("Voluntary Extraction Monitoring & Pumping Review", "Maintain voluntary extraction monitoring and seasonal pumping reviews to assess local water table behavior during peak summer dry periods."),
                 ("Crop Water Management Options", "Explore crop transitions toward drought-resilient varieties and high-efficiency drip irrigation as locally assessed agricultural options, rather than blanket prescriptions."),
                 ("Farm Storage Pond Lining Assessment (Shet-Tale)", "Assess farm storage pond lining requirements based on site-specific soil and water-retention characteristics, avoiding unnecessary lining where native soils demonstrate low permeability.")

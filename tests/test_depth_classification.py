@@ -179,3 +179,27 @@ def test_station_telemetry_intervention_coverage():
     assert "Moderate" in categories_found, "Moderate stations missing in telemetry"
     assert "Shallow" in categories_found, "Shallow stations missing in telemetry"
     assert "Unknown" not in categories_found, "Valid station telemetry unexpectedly flagged Unknown"
+
+
+def test_deep_tier_recommendation_geological_scientific_cautiousness():
+    """Verify Deep Tier artificial recharge recommendation excludes unverified basalt assumptions while preserving site-specific feasibility requirements."""
+    deep_plan = get_intervention_plan(9.0)
+    action_dict = dict(deep_plan["actions"])
+    recharge_desc = action_dict["Artificial Recharge Feasibility Assessment"]
+    
+    # Must NOT assert localized fractured basalt
+    assert "fractured basalt" not in recharge_desc.lower()
+    assert "basalt" not in recharge_desc.lower()
+    
+    # Must retain mandatory site-specific feasibility requirements
+    assert "strictly requiring site-specific geological, hydrogeological, and infiltration feasibility assessment." in recharge_desc
+    assert "Evaluate check dams and percolation structures as preliminary recharge options" in recharge_desc
+
+    # Confirm Moderate, Shallow, and Unknown remain intact and unchanged
+    mod_plan = get_intervention_plan(5.5)
+    assert len(mod_plan["actions"]) == 3
+    shallow_plan = get_intervention_plan(2.5)
+    assert len(shallow_plan["actions"]) == 2
+    unknown_plan = get_intervention_plan(None)
+    assert len(unknown_plan["actions"]) == 2
+
